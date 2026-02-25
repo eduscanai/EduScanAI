@@ -1,0 +1,12 @@
+[
+  { "name": "Língua Portuguesa", "code": "POR" },
+  { "name": "Matemática", "code": "MAT" },
+  { "name": "Ciências", "code": "CIE" },
+  { "name": "História", "code": "HIS" },
+  { "name": "Geografia", "code": "GEO" },
+  { "name": "Educação Física", "code": "EDF" },
+  { "name": "Artes", "code": "ART" },
+  { "name": "Inglês", "code": "ING" },
+  { "name": "Ensino Religioso", "code": "ENR" },
+  { "name": "Redação", "code": "RED" }
+]

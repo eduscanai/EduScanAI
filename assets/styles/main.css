@@ -1,0 +1,223 @@
+/**
+ * Estilos globais com Tailwind CSS
+ */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply font-sans antialiased bg-bg-page text-text-primary;
+  }
+
+  /* Headings padrão */
+  h1 {
+    @apply text-heading-1;
+  }
+
+  h2 {
+    @apply text-heading-2;
+  }
+
+  h3 {
+    @apply text-heading-3;
+  }
+
+  p {
+    @apply text-body;
+  }
+}
+
+@layer components {
+  /* ========================================
+     BUTTON VARIANTS
+     ======================================== */
+
+  /* Primary Button - Ação principal */
+  .btn-primary {
+    @apply px-5 py-2.5 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors duration-200 font-semibold text-body;
+  }
+
+  /* Secondary Button - Ação secundária */
+  .btn-secondary {
+    @apply px-5 py-2.5 border border-primary-500 text-primary-500 bg-transparent rounded-lg hover:bg-primary-50 transition-colors duration-200 font-semibold text-body;
+  }
+
+  /* Outline Button - Ações neutras */
+  .btn-outline {
+    @apply px-5 py-2.5 border border-gray-300 text-text-primary bg-transparent rounded-lg hover:bg-gray-50 transition-colors duration-200 font-semibold text-body;
+  }
+
+  /* Destructive Button - Ações destrutivas */
+  .btn-destructive {
+    @apply px-5 py-2.5 text-critical-500 bg-transparent hover:text-critical-600 transition-colors duration-200 font-semibold text-body;
+  }
+
+  /* ========================================
+     FORM INPUTS
+     ======================================== */
+
+  /* Label do campo */
+  .form-label {
+    @apply block text-sm font-semibold text-text-primary mb-2;
+  }
+
+  /* Input padrão */
+  .form-input {
+    @apply w-full px-4 py-3 bg-gray-100 border border-transparent rounded-lg text-text-primary placeholder:text-gray-400 placeholder:font-normal focus:outline-none focus:bg-white focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 transition-all duration-200;
+  }
+
+  /* Input read-only (ex: Assignment ID) */
+  .form-input-readonly {
+    @apply w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-text-primary cursor-not-allowed;
+  }
+
+  /* Input com ícone à esquerda */
+  .form-input-with-icon {
+    @apply pl-12;
+  }
+
+  /* Container do ícone do input */
+  .form-input-icon {
+    @apply absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5;
+  }
+
+  /* ========================================
+     STATUS BADGES
+     ======================================== */
+
+  /* Badge Mastered - Concluído */
+  .badge-mastered {
+    @apply inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold uppercase text-success-500 border border-success-500;
+    background-color: #e6f4ea;
+  }
+
+  /* Badge In Progress - Em progresso */
+  .badge-in-progress {
+    @apply inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold uppercase text-text-primary border border-warning-500;
+    background-color: #fff8e1;
+  }
+
+  /* Badge At Risk - Em risco */
+  .badge-at-risk {
+    @apply inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold uppercase text-critical-500 border border-critical-500;
+    background-color: #fdecea;
+  }
+
+  /* Badge Processing - Processando */
+  .badge-processing {
+    @apply inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold uppercase text-purple-500 border border-purple-500;
+    background-color: #f3e8ff;
+  }
+
+  /* Dot colorido dos badges */
+  .badge-dot {
+    @apply w-2 h-2 rounded-full;
+  }
+
+  .badge-dot-success {
+    @apply bg-success-500;
+  }
+
+  .badge-dot-warning {
+    @apply bg-warning-500;
+  }
+
+  .badge-dot-critical {
+    @apply bg-critical-500;
+  }
+
+  .badge-dot-processing {
+    @apply bg-purple-500;
+  }
+
+  /* ========================================
+     TOGGLE SWITCHES
+     ======================================== */
+
+  /* Container do toggle */
+  .toggle {
+    @apply relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 ease-in-out cursor-pointer;
+  }
+
+  /* Toggle ativo */
+  .toggle-active {
+    @apply bg-primary-500;
+  }
+
+  /* Toggle inativo */
+  .toggle-inactive {
+    @apply bg-gray-300;
+  }
+
+  /* Thumb do toggle */
+  .toggle-thumb {
+    @apply inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-200 ease-in-out;
+  }
+
+  /* Thumb ativo (deslocado) */
+  .toggle-thumb-active {
+    @apply translate-x-6;
+  }
+
+  /* Thumb inativo */
+  .toggle-thumb-inactive {
+    @apply translate-x-1;
+  }
+
+  /* Label do toggle */
+  .toggle-label {
+    @apply ml-3 text-sm font-medium text-text-primary;
+  }
+
+  /* ========================================
+     ICONOGRAPHY
+     ======================================== */
+
+  /* Ícone padrão */
+  .icon {
+    @apply w-6 h-6;
+    stroke-width: 1.5;
+  }
+
+  /* Ícone ativo/hover */
+  .icon-active {
+    @apply text-primary-500;
+  }
+
+  /* ========================================
+     CARDS
+     ======================================== */
+
+  .card {
+    @apply bg-bg-card rounded-lg shadow-md p-6;
+  }
+
+  /* ========================================
+     ALERTS (mantidos)
+     ======================================== */
+
+  .alert-success {
+    @apply p-4 rounded-lg border-l-4 border-success-500 bg-success-50 text-success-800;
+  }
+
+  .alert-warning {
+    @apply p-4 rounded-lg border-l-4 border-warning-500 bg-warning-50 text-warning-800;
+  }
+
+  .alert-critical {
+    @apply p-4 rounded-lg border-l-4 border-critical-500 bg-critical-50 text-critical-800;
+  }
+}
+
+@layer utilities {
+  /* Gradientes */
+  .text-gradient {
+    @apply bg-gradient-to-r from-primary-500 to-purple-500 bg-clip-text text-transparent;
+  }
+
+  .text-gradient-data {
+    @apply bg-gradient-to-r from-data-teal-500 to-primary-500 bg-clip-text text-transparent;
+  }
+}
