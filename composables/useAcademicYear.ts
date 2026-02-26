@@ -62,6 +62,7 @@ export const useAcademicYear = () => {
         .from('academic_years')
         .update(updates)
         .eq('id', id)
+        .eq('school_id', usuario.value.schoolId)
         .select()
         .single()
       if (err) throw err
@@ -82,6 +83,7 @@ export const useAcademicYear = () => {
         .from('academic_years')
         .delete()
         .eq('id', id)
+        .eq('school_id', usuario.value.schoolId)
       if (err) throw err
     } catch (e: any) {
       error.value = e.message

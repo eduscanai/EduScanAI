@@ -299,6 +299,6 @@ const abrirModalEscanear = () => {
 }
 
 const exportarTudo = () => {
-  console.log('Exportar tudo')
+  // TODO: implementar exportação completa
 }
 </script>

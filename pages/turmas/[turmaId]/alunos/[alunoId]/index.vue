@@ -222,6 +222,7 @@ definePageMeta({
 })
 
 const supabase = useSupabaseClient()
+const { usuario } = useUsuario()
 const { fetchUser } = useUsers()
 const { fetchClass } = useClasses()
 const { fetchStudentScoresOverTime } = useSubmissions()
@@ -394,7 +395,7 @@ const classeTagTopico = (nivel: string) => {
 }
 
 const gerarPlano = () => {
-  console.log('Gerar plano personalizado')
+  // TODO: implementar geração de plano personalizado
 }
 
 // Init
@@ -403,6 +404,17 @@ onMounted(async () => {
     fetchUser(alunoId),
     fetchClass(turmaId)
   ])
+
+  // Verificar que aluno e turma pertencem à mesma escola
+  if (!userData || userData.school_id !== usuario.value.schoolId) {
+    loadingPage.value = false
+    return
+  }
+  if (!classData || classData.school_id !== usuario.value.schoolId) {
+    loadingPage.value = false
+    return
+  }
+
   alunoData.value = userData
   turmaData.value = classData
 

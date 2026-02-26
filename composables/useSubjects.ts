@@ -64,6 +64,7 @@ export const useSubjects = () => {
         .from('subjects')
         .update(updates)
         .eq('id', id)
+        .eq('school_id', usuario.value.schoolId)
         .select('id, school_id, name, code')
         .single()
       if (err) throw err
@@ -84,6 +85,7 @@ export const useSubjects = () => {
         .from('subjects')
         .delete()
         .eq('id', id)
+        .eq('school_id', usuario.value.schoolId)
       if (err) throw err
     } catch (e: any) {
       error.value = e.message

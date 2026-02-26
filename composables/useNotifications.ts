@@ -21,46 +21,50 @@ export const useNotifications = () => {
   let realtimeChannel: any = null
 
   const fetchNotifications = async (limit = 50) => {
+    if (!user.value?.id) return
     loading.value = true
     try {
       const { data, error } = await supabase
         .from('notifications')
         .select('*')
-        .eq('user_id', user.value!.id)
+        .eq('user_id', user.value.id)
         .order('created_at', { ascending: false })
         .limit(limit)
 
       if (error) throw error
       notifications.value = (data || []) as Notification[]
       calcularNaoLidas()
-    } catch (e: any) {
-      console.error('Erro ao buscar notificações:', e.message)
+    } catch {
+      // silently fail
     } finally {
       loading.value = false
     }
   }
 
   const fetchUnreadCount = async () => {
+    if (!user.value?.id) return
     try {
       const { count, error } = await supabase
         .from('notifications')
         .select('*', { count: 'exact', head: true })
-        .eq('user_id', user.value!.id)
+        .eq('user_id', user.value.id)
         .is('read_at', null)
 
       if (error) throw error
       unreadCount.value = count || 0
-    } catch (e: any) {
-      console.error('Erro ao contar notificações:', e.message)
+    } catch {
+      // silently fail
     }
   }
 
   const markAsRead = async (id: string) => {
+    if (!user.value?.id) return
     try {
       const { error } = await supabase
         .from('notifications')
         .update({ read_at: new Date().toISOString() })
         .eq('id', id)
+        .eq('user_id', user.value.id)
 
       if (error) throw error
 
@@ -69,17 +73,18 @@ export const useNotifications = () => {
         notif.read_at = new Date().toISOString()
         unreadCount.value = Math.max(0, unreadCount.value - 1)
       }
-    } catch (e: any) {
-      console.error('Erro ao marcar como lida:', e.message)
+    } catch {
+      // silently fail
     }
   }
 
   const markAllAsRead = async () => {
+    if (!user.value?.id) return
     try {
       const { error } = await supabase
         .from('notifications')
         .update({ read_at: new Date().toISOString() })
-        .eq('user_id', user.value!.id)
+        .eq('user_id', user.value.id)
         .is('read_at', null)
 
       if (error) throw error
@@ -88,17 +93,19 @@ export const useNotifications = () => {
         if (!n.read_at) n.read_at = new Date().toISOString()
       })
       unreadCount.value = 0
-    } catch (e: any) {
-      console.error('Erro ao marcar todas como lidas:', e.message)
+    } catch {
+      // silently fail
     }
   }
 
   const deleteNotification = async (id: string) => {
+    if (!user.value?.id) return
     try {
       const { error } = await supabase
         .from('notifications')
         .delete()
         .eq('id', id)
+        .eq('user_id', user.value.id)
 
       if (error) throw error
 
@@ -109,8 +116,8 @@ export const useNotifications = () => {
         }
         notifications.value.splice(index, 1)
       }
-    } catch (e: any) {
-      console.error('Erro ao deletar notificação:', e.message)
+    } catch {
+      // silently fail
     }
   }
 

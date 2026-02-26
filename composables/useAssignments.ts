@@ -30,19 +30,21 @@ export const useAssignments = () => {
 
   // Helper: get teacher's class IDs
   const getTeacherClassIds = async (): Promise<string[]> => {
+    if (!user.value?.id) return []
     const { data } = await supabase
       .from('class_teachers')
       .select('class_id')
-      .eq('teacher_id', user.value!.id)
+      .eq('teacher_id', user.value.id)
     return data?.map((c: any) => c.class_id) || []
   }
 
   // Helper: get student's class IDs
   const getStudentClassIds = async (): Promise<string[]> => {
+    if (!user.value?.id) return []
     const { data } = await supabase
       .from('class_students')
       .select('class_id')
-      .eq('student_id', user.value!.id)
+      .eq('student_id', user.value.id)
     return data?.map((c: any) => c.class_id) || []
   }
 
@@ -125,6 +127,7 @@ export const useAssignments = () => {
   }
 
   const fetchPendingForStudent = async () => {
+    if (!user.value?.id) return []
     try {
       const classIds = await getStudentClassIds()
       if (classIds.length === 0) return []
@@ -142,7 +145,7 @@ export const useAssignments = () => {
       const { data: mySubmissions } = await supabase
         .from('submissions')
         .select('assignment_id')
-        .eq('student_id', user.value!.id)
+        .eq('student_id', user.value.id)
 
       const submittedIds = new Set((mySubmissions || []).map((s: any) => s.assignment_id))
       return (allAssignments as any[]).filter(a => !submittedIds.has(a.id))
@@ -179,6 +182,7 @@ export const useAssignments = () => {
     max_score?: number
     attachments?: { name: string; url: string }[]
   }) => {
+    if (!user.value?.id) throw new Error('Usuário não autenticado')
     loading.value = true
     error.value = null
     try {
@@ -187,7 +191,7 @@ export const useAssignments = () => {
         .insert({
           ...data,
           school_id: usuario.value.schoolId,
-          teacher_id: user.value!.id,
+          teacher_id: user.value.id,
           status: 'draft'
         })
         .select()
@@ -210,6 +214,7 @@ export const useAssignments = () => {
         .from('assignments')
         .update(data)
         .eq('id', id)
+        .eq('school_id', usuario.value.schoolId)
         .select('*, classes(name), subjects(name), profiles(full_name)')
         .single()
       if (err) throw err
@@ -241,6 +246,7 @@ export const useAssignments = () => {
         .from('assignments')
         .delete()
         .eq('id', id)
+        .eq('school_id', usuario.value.schoolId)
       if (err) throw err
     } catch (e: any) {
       error.value = e.message

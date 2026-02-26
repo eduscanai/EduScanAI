@@ -260,7 +260,7 @@ const esqueceuSenha = async () => {
 }
 
 const loginGoogle = () => {
-  console.log('Login com Google - em breve')
+  // TODO: implementar login com Google
 }
 
 const criarConta = () => {

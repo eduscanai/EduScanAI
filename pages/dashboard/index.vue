@@ -416,17 +416,26 @@ const fetchAnoLetivo = async () => {
   anoLetivo.value = (data as any)?.name || null
 }
 
-// --- Fetch class student counts ---
+// --- Fetch class student counts (single query instead of N+1) ---
 const fetchTurmasComAlunos = async () => {
-  const result: { id: string; nome: string; alunos: number }[] = []
-  for (const c of classes.value) {
-    const { count } = await supabase
-      .from('class_students')
-      .select('student_id', { count: 'exact', head: true })
-      .eq('class_id', c.id)
-    result.push({ id: c.id, nome: c.name, alunos: count || 0 })
-  }
-  return result
+  const classIds = classes.value.map(c => c.id)
+  if (classIds.length === 0) return []
+
+  const { data: allStudents } = await supabase
+    .from('class_students')
+    .select('class_id')
+    .in('class_id', classIds)
+
+  const countMap = new Map<string, number>()
+  allStudents?.forEach((s: any) => {
+    countMap.set(s.class_id, (countMap.get(s.class_id) || 0) + 1)
+  })
+
+  return classes.value.map(c => ({
+    id: c.id,
+    nome: c.name,
+    alunos: countMap.get(c.id) || 0
+  }))
 }
 
 // --- Format time ago ---

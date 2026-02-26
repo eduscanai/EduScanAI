@@ -10,6 +10,9 @@ interface UserData {
 }
 
 export default defineEventHandler(async (event) => {
+  // Verificar autenticação e permissão de admin
+  const { profile: adminProfile } = await requireAdmin(event)
+
   const client = await serverSupabaseServiceRole(event)
   const body = await readBody(event)
 
@@ -22,7 +25,7 @@ export default defineEventHandler(async (event) => {
 
   const userRole = role || 'student'
 
-  // Validar role
+  // Impedir criação de admin em massa
   const rolesValidos = ['pedagogue', 'teacher', 'student']
   if (!rolesValidos.includes(userRole)) {
     throw createError({
@@ -35,6 +38,22 @@ export default defineEventHandler(async (event) => {
     throw createError({
       statusCode: 400,
       message: 'Campos obrigatórios: students (array), school_id, password'
+    })
+  }
+
+  // Validar que o admin só pode criar usuários na própria escola
+  if (school_id !== adminProfile.school_id) {
+    throw createError({
+      statusCode: 403,
+      message: 'Não é possível criar usuários em outra escola'
+    })
+  }
+
+  // Validar senha
+  if (password.length < 8) {
+    throw createError({
+      statusCode: 400,
+      message: 'A senha deve ter pelo menos 8 caracteres'
     })
   }
 
@@ -51,7 +70,6 @@ export default defineEventHandler(async (event) => {
 
     await Promise.all(batch.map(async (user) => {
       try {
-        // 1. Criar auth user
         const { data: authData, error: authError } = await client.auth.admin.createUser({
           email: user.email,
           password,
@@ -65,7 +83,6 @@ export default defineEventHandler(async (event) => {
           return
         }
 
-        // 2. Upsert profile
         const profileData: Record<string, any> = {
           id: authData.user.id,
           school_id,
@@ -75,7 +92,6 @@ export default defineEventHandler(async (event) => {
           is_active: true
         }
 
-        // Campos extras só para alunos
         if (userRole === 'student') {
           profileData.matricula = user.matricula || null
           profileData.cpf = user.cpf || null
@@ -88,7 +104,6 @@ export default defineEventHandler(async (event) => {
           .upsert(profileData, { onConflict: 'id' })
 
         if (profileError) {
-          // Limpar auth user órfão
           await client.auth.admin.deleteUser(authData.user.id)
           results.errors.push({ email: user.email, error: profileError.message })
           return

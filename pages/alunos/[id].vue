@@ -167,6 +167,7 @@ definePageMeta({
   requiredRole: ['admin', 'pedagogue']
 })
 
+const { usuario } = useUsuario()
 const { fetchUser } = useUsers()
 const { fetchGradedForStudent } = useSubmissions()
 
@@ -240,7 +241,15 @@ const statsAluno = computed(() => [
 onMounted(async () => {
   const supabase = useSupabaseClient()
 
-  const [userData] = await Promise.all([fetchUser(alunoId)])
+  const userData = await fetchUser(alunoId)
+
+  // Verificar que o aluno pertence à mesma escola
+  if (!userData || userData.school_id !== usuario.value.schoolId) {
+    aluno.value = null
+    loadingPage.value = false
+    return
+  }
+
   aluno.value = userData
 
   // Fetch submissions for this specific student (not the logged-in user)

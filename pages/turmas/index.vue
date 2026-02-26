@@ -154,16 +154,20 @@ const loadingTurmas = ref(true)
 const studentCounts = ref<Record<string, number>>({})
 const totalAssignments = ref(0)
 
-// Fetch student counts for each class
+// Fetch student counts (single query instead of N+1)
 const fetchStudentCounts = async () => {
+  const classIds = classes.value.map(c => c.id)
+  if (classIds.length === 0) { studentCounts.value = {}; return }
+
+  const { data: allStudents } = await supabase
+    .from('class_students')
+    .select('class_id')
+    .in('class_id', classIds)
+
   const result: Record<string, number> = {}
-  for (const c of classes.value) {
-    const { count } = await supabase
-      .from('class_students')
-      .select('student_id', { count: 'exact', head: true })
-      .eq('class_id', c.id)
-    result[c.id] = count || 0
-  }
+  allStudents?.forEach((s: any) => {
+    result[s.class_id] = (result[s.class_id] || 0) + 1
+  })
   studentCounts.value = result
 }
 

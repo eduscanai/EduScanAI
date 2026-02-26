@@ -47,10 +47,11 @@ export const useClasses = () => {
 
     try {
       if (isTeacher.value) {
+        if (!user.value?.id) { classes.value = []; return }
         const { data: linked } = await supabase
           .from('class_teachers')
           .select('class_id')
-          .eq('teacher_id', user.value!.id)
+          .eq('teacher_id', user.value.id)
         const classIds = linked?.map((c: any) => c.class_id) || []
         if (classIds.length === 0) {
           classes.value = []
@@ -67,10 +68,11 @@ export const useClasses = () => {
         if (err) throw err
         classes.value = (data || []) as ClassData[]
       } else if (isStudent.value) {
+        if (!user.value?.id) { classes.value = []; return }
         const { data: linked } = await supabase
           .from('class_students')
           .select('class_id')
-          .eq('student_id', user.value!.id)
+          .eq('student_id', user.value.id)
         const classIds = linked?.map((c: any) => c.class_id) || []
         if (classIds.length === 0) {
           classes.value = []
@@ -93,7 +95,7 @@ export const useClasses = () => {
           .eq('school_id', usuario.value.schoolId)
         if (params.academicYearId) query = query.eq('academic_year_id', params.academicYearId)
         if (params.search) query = query.ilike('name', `%${params.search}%`)
-        query = query.order('name')
+        query = query.order('name').limit(100)
         const { data, error: err } = await query
         if (err) throw err
         classes.value = (data || []) as ClassData[]
@@ -152,6 +154,7 @@ export const useClasses = () => {
         .from('classes')
         .update(updates)
         .eq('id', id)
+        .eq('school_id', usuario.value.schoolId)
         .select('*, academic_years(name), profiles!teacher_id(id, full_name)')
         .single()
       if (err) throw err
@@ -172,6 +175,7 @@ export const useClasses = () => {
         .from('classes')
         .delete()
         .eq('id', id)
+        .eq('school_id', usuario.value.schoolId)
       if (err) throw err
     } catch (e: any) {
       error.value = e.message

@@ -1,16 +1,33 @@
 import { serverSupabaseServiceRole } from '#supabase/server'
 
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
 export default defineEventHandler(async (event) => {
   const client = await serverSupabaseServiceRole(event)
   const body = await readBody(event)
 
   const { school_name, slug, full_name, email, password } = body
 
-  // Validações
+  // Validações de campos obrigatórios
   if (!school_name || !slug || !full_name || !email || !password) {
     throw createError({
       statusCode: 400,
       message: 'Campos obrigatórios: school_name, slug, full_name, email, password'
+    })
+  }
+
+  // Validar tamanhos
+  if (school_name.length > 200 || full_name.length > 200) {
+    throw createError({
+      statusCode: 400,
+      message: 'Nome da escola e nome completo devem ter no máximo 200 caracteres'
+    })
+  }
+
+  if (slug.length < 3 || slug.length > 50) {
+    throw createError({
+      statusCode: 400,
+      message: 'Slug deve ter entre 3 e 50 caracteres'
     })
   }
 
@@ -21,10 +38,19 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  if (password.length < 6) {
+  // Validar email
+  if (!emailRegex.test(email)) {
     throw createError({
       statusCode: 400,
-      message: 'A senha deve ter pelo menos 6 caracteres'
+      message: 'Formato de email inválido'
+    })
+  }
+
+  // Validar senha (mín. 8 chars, 1 maiúscula, 1 número)
+  if (password.length < 8 || !/[A-Z]/.test(password) || !/\d/.test(password)) {
+    throw createError({
+      statusCode: 400,
+      message: 'A senha deve ter pelo menos 8 caracteres, 1 letra maiúscula e 1 número'
     })
   }
 
@@ -46,8 +72,8 @@ export default defineEventHandler(async (event) => {
   const { data: school, error: schoolError } = await client
     .from('schools')
     .insert({
-      name: school_name,
-      slug,
+      name: school_name.trim(),
+      slug: slug.trim(),
       plan: 'free'
     })
     .select()
@@ -62,10 +88,10 @@ export default defineEventHandler(async (event) => {
 
   // 3. Criar o usuário admin no Auth
   const { data: authData, error: authError } = await client.auth.admin.createUser({
-    email,
+    email: email.trim(),
     password,
     email_confirm: true,
-    user_metadata: { nome: full_name },
+    user_metadata: { nome: full_name.trim() },
     app_metadata: { role: 'admin', school_id: school.id }
   })
 
@@ -81,7 +107,7 @@ export default defineEventHandler(async (event) => {
 
   // 4. Criar ano letivo padrão
   const anoAtual = new Date().getFullYear()
-  const { error: yearError } = await client
+  await client
     .from('academic_years')
     .insert({
       school_id: school.id,
@@ -90,10 +116,6 @@ export default defineEventHandler(async (event) => {
       end_date: `${anoAtual}-12-15`,
       is_current: true
     })
-
-  if (yearError) {
-    console.warn('Aviso: erro ao criar ano letivo padrão:', yearError.message)
-  }
 
   return {
     school: {

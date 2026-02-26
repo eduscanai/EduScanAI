@@ -55,6 +55,7 @@ export const useAnnouncements = () => {
         .from('announcements')
         .select('*, profiles(full_name, avatar_url), classes:target_id(name)')
         .eq('id', id)
+        .eq('school_id', usuario.value.schoolId)
         .single()
       if (err) throw err
       return data as Announcement
@@ -75,6 +76,7 @@ export const useAnnouncements = () => {
     priority?: 'low' | 'normal' | 'high'
     publish?: boolean
   }) => {
+    if (!user.value?.id) throw new Error('Usuário não autenticado')
     loading.value = true
     error.value = null
     try {
@@ -82,7 +84,7 @@ export const useAnnouncements = () => {
         .from('announcements')
         .insert({
           school_id: usuario.value.schoolId,
-          author_id: user.value!.id,
+          author_id: user.value.id,
           title: data.title,
           content: data.content || null,
           target_type: data.target_type,
@@ -111,6 +113,7 @@ export const useAnnouncements = () => {
         .from('announcements')
         .update(data)
         .eq('id', id)
+        .eq('school_id', usuario.value.schoolId)
         .select('*, profiles(full_name, avatar_url)')
         .single()
       if (err) throw err
@@ -137,6 +140,7 @@ export const useAnnouncements = () => {
         .from('announcements')
         .delete()
         .eq('id', id)
+        .eq('school_id', usuario.value.schoolId)
       if (err) throw err
     } catch (e: any) {
       error.value = e.message

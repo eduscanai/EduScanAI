@@ -270,7 +270,7 @@ const abrirModalScan = () => {
 }
 
 const exportarPDF = () => {
-  console.log('Exportar PDF')
+  // TODO: implementar exportação PDF
 }
 
 // Init
