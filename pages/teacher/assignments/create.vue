@@ -12,7 +12,7 @@
       </NuxtLink>
       <div>
         <h1 class="text-heading-1">Nova Atividade</h1>
-        <p class="text-body text-text-secondary mt-1">Crie uma nova atividade para sua turma</p>
+        <p class="text-body text-text-secondary mt-1">Crie uma nova atividade para suas turmas</p>
       </div>
     </div>
 
@@ -42,7 +42,7 @@
             v-model="form.attachments"
             rotulo="Anexos"
             bucket="assignments-files"
-            :pasta="form.class_id || undefined"
+            :pasta="form.class_ids[0] || undefined"
           />
         </Cartao>
       </div>
@@ -52,16 +52,13 @@
         <Cartao>
           <h2 class="text-heading-3 mb-4">Configurações</h2>
           <div class="space-y-4">
-            <div>
-              <CampoSelecao
-                rotulo="Turma *"
-                :modelValue="form.class_id"
-                @update:modelValue="form.class_id = $event as string"
-                texto-reservado="Selecione a turma"
-                :opcoes="opcoesTurma"
-              />
-              <p v-if="erros.class_id" class="mt-1 text-xs text-critical-500">{{ erros.class_id }}</p>
-            </div>
+            <SeletorMultiplo
+              v-model="form.class_ids"
+              rotulo="Turmas *"
+              texto-reservado="Selecione uma ou mais turmas"
+              :opcoes="opcoesTurma"
+              :erro="erros.class_ids"
+            />
 
             <div>
               <CampoSelecao
@@ -109,10 +106,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
 import Icone from '~/components/ui/Icone/Icone.vue'
 import Cartao from '~/components/layout/Cartao/Cartao.vue'
 import CampoSelecao from '~/components/form/CampoSelecao/CampoSelecao.vue'
+import SeletorMultiplo from '~/components/form/SeletorMultiplo/SeletorMultiplo.vue'
 import EditorRico from '~/components/form/EditorRico/EditorRico.vue'
 import UploadArquivo from '~/components/form/UploadArquivo/UploadArquivo.vue'
 import Notificacao from '~/components/feedback/Notificacao/Notificacao.vue'
@@ -130,7 +127,7 @@ const { subjects, fetchSubjects } = useSubjects()
 const form = ref({
   title: '',
   description: '',
-  class_id: '',
+  class_ids: [] as string[],
   subject_id: '',
   due_date: '',
   max_score: 10,
@@ -150,46 +147,40 @@ const opcoesDisciplina = computed(() =>
 const validar = () => {
   erros.value = {}
   if (!form.value.title.trim()) erros.value.title = 'Título é obrigatório'
-  if (!form.value.class_id) erros.value.class_id = 'Selecione uma turma'
+  if (!form.value.class_ids.length) erros.value.class_ids = 'Selecione ao menos uma turma'
   return Object.keys(erros.value).length === 0
 }
+
+const dadosAtividade = () => ({
+  title: form.value.title,
+  description: form.value.description || undefined,
+  class_ids: form.value.class_ids,
+  subject_id: form.value.subject_id || undefined,
+  due_date: form.value.due_date || undefined,
+  max_score: form.value.max_score,
+  attachments: form.value.attachments
+})
 
 const salvarRascunho = async () => {
   if (!validar()) return
   try {
-    const result = await createAssignment({
-      title: form.value.title,
-      description: form.value.description || undefined,
-      class_id: form.value.class_id,
-      subject_id: form.value.subject_id || undefined,
-      due_date: form.value.due_date || undefined,
-      max_score: form.value.max_score,
-      attachments: form.value.attachments
-    })
+    const results = await createAssignment(dadosAtividade())
     mostrarNotificacao('sucesso', 'Rascunho salvo!')
-    setTimeout(() => navigateTo(`/teacher/assignments/${result?.id}`), 1000)
-  } catch {
-    mostrarNotificacao('critico', 'Erro ao salvar rascunho')
+    setTimeout(() => navigateTo(`/teacher/assignments/${results[0]?.id}`), 1000)
+  } catch (e: any) {
+    mostrarNotificacao('critico', 'Erro ao salvar rascunho', e?.message || '')
   }
 }
 
 const salvarEPublicar = async () => {
   if (!validar()) return
   try {
-    const result = await createAssignment({
-      title: form.value.title,
-      description: form.value.description || undefined,
-      class_id: form.value.class_id,
-      subject_id: form.value.subject_id || undefined,
-      due_date: form.value.due_date || undefined,
-      max_score: form.value.max_score,
-      attachments: form.value.attachments
-    })
-    if (result) await publishAssignment(result.id)
+    const results = await createAssignment(dadosAtividade())
+    await Promise.all(results.map(r => publishAssignment(r.id)))
     mostrarNotificacao('sucesso', 'Atividade publicada! Alunos foram notificados.')
     setTimeout(() => navigateTo('/teacher/assignments'), 1500)
-  } catch {
-    mostrarNotificacao('critico', 'Erro ao publicar atividade')
+  } catch (e: any) {
+    mostrarNotificacao('critico', 'Erro ao publicar atividade', e?.message || '')
   }
 }
 

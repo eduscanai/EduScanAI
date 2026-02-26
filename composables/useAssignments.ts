@@ -174,7 +174,7 @@ export const useAssignments = () => {
   }
 
   const createAssignment = async (data: {
-    class_id: string
+    class_ids: string[]
     subject_id?: string
     title: string
     description?: string
@@ -182,22 +182,26 @@ export const useAssignments = () => {
     max_score?: number
     attachments?: { name: string; url: string }[]
   }) => {
-    if (!user.value?.id) throw new Error('Usuário não autenticado')
+    const { data: { user: currentUser } } = await supabase.auth.getUser()
+    if (!currentUser?.id) throw new Error('Usuário não autenticado')
+    if (!data.class_ids.length) throw new Error('Selecione ao menos uma turma')
     loading.value = true
     error.value = null
     try {
+      const { class_ids, ...rest } = data
+      const inserts = class_ids.map(class_id => ({
+        ...rest,
+        class_id,
+        school_id: usuario.value.schoolId,
+        teacher_id: currentUser.id,
+        status: 'draft' as const
+      }))
       const { data: result, error: err } = await supabase
         .from('assignments')
-        .insert({
-          ...data,
-          school_id: usuario.value.schoolId,
-          teacher_id: user.value.id,
-          status: 'draft'
-        })
+        .insert(inserts as any)
         .select()
-        .single()
       if (err) throw err
-      return result as Assignment
+      return (result || []) as Assignment[]
     } catch (e: any) {
       error.value = e.message
       throw e
@@ -210,11 +214,10 @@ export const useAssignments = () => {
     loading.value = true
     error.value = null
     try {
-      const { data: result, error: err } = await supabase
+      const { data: result, error: err } = await (supabase as any)
         .from('assignments')
         .update(data)
         .eq('id', id)
-        .eq('school_id', usuario.value.schoolId)
         .select('*, classes(name), subjects(name), profiles(full_name)')
         .single()
       if (err) throw err
@@ -228,14 +231,41 @@ export const useAssignments = () => {
   }
 
   const publishAssignment = async (id: string) => {
-    return updateAssignment(id, {
-      status: 'published',
-      published_at: new Date().toISOString()
-    } as Partial<Assignment>)
+    loading.value = true
+    try {
+      const { data: result, error: err } = await (supabase as any)
+        .from('assignments')
+        .update({ status: 'published', published_at: new Date().toISOString() })
+        .eq('id', id)
+        .select('*, classes(name), subjects(name), profiles(full_name)')
+        .single()
+      if (err) throw err
+      return result as Assignment
+    } catch (e: any) {
+      error.value = e.message
+      throw e
+    } finally {
+      loading.value = false
+    }
   }
 
   const closeAssignment = async (id: string) => {
-    return updateAssignment(id, { status: 'closed' } as Partial<Assignment>)
+    loading.value = true
+    try {
+      const { data: result, error: err } = await (supabase as any)
+        .from('assignments')
+        .update({ status: 'closed' })
+        .eq('id', id)
+        .select('*, classes(name), subjects(name), profiles(full_name)')
+        .single()
+      if (err) throw err
+      return result as Assignment
+    } catch (e: any) {
+      error.value = e.message
+      throw e
+    } finally {
+      loading.value = false
+    }
   }
 
   const deleteAssignment = async (id: string) => {
@@ -246,7 +276,6 @@ export const useAssignments = () => {
         .from('assignments')
         .delete()
         .eq('id', id)
-        .eq('school_id', usuario.value.schoolId)
       if (err) throw err
     } catch (e: any) {
       error.value = e.message

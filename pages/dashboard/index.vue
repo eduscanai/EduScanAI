@@ -135,17 +135,40 @@
           <div v-if="turmasResumo.length === 0" class="py-6 text-center">
             <p class="text-sm text-gray-500">Nenhuma turma cadastrada.</p>
           </div>
-          <div v-else class="space-y-3">
-            <NuxtLink
-              v-for="turma in turmasResumo"
-              :key="turma.id"
-              :to="`/turmas/${turma.id}`"
-              class="flex items-center justify-between py-2 border-b border-gray-100 last:border-0 no-underline hover:bg-gray-50 rounded px-2 -mx-2 transition-colors"
-            >
-              <span class="text-sm font-medium text-gray-900">{{ turma.nome }}</span>
-              <span class="text-xs text-gray-500">{{ turma.alunos }} alunos</span>
-            </NuxtLink>
-          </div>
+          <template v-else>
+            <div class="space-y-1 min-h-[220px]">
+              <NuxtLink
+                v-for="turma in turmasPaginadas"
+                :key="turma.id"
+                :to="`/turmas/${turma.id}`"
+                class="flex items-center justify-between py-2.5 px-3 rounded-lg no-underline hover:bg-gray-50 transition-colors"
+              >
+                <span class="text-sm font-medium text-gray-900 truncate">{{ turma.nome }}</span>
+                <span class="text-xs text-gray-500 shrink-0 ml-2">{{ turma.alunos }} alunos</span>
+              </NuxtLink>
+            </div>
+            <div v-if="totalPaginasTurmas > 1" class="flex items-center justify-between mt-4">
+              <span class="text-xs text-gray-400">Página {{ paginaTurmas }} de {{ totalPaginasTurmas }}</span>
+              <div class="flex gap-2">
+                <button
+                  :disabled="paginaTurmas <= 1"
+                  class="px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors"
+                  :class="paginaTurmas <= 1 ? 'border-gray-200 text-gray-300 cursor-not-allowed' : 'border-gray-200 text-gray-600 hover:bg-gray-50'"
+                  @click="paginaTurmas--"
+                >
+                  Anterior
+                </button>
+                <button
+                  :disabled="paginaTurmas >= totalPaginasTurmas"
+                  class="px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors"
+                  :class="paginaTurmas >= totalPaginasTurmas ? 'border-gray-200 text-gray-300 cursor-not-allowed' : 'border-gray-200 text-gray-600 hover:bg-gray-50'"
+                  @click="paginaTurmas++"
+                >
+                  Próxima
+                </button>
+              </div>
+            </div>
+          </template>
         </Cartao>
 
         <Cartao>
@@ -382,6 +405,13 @@ const totalUngraded = ref(0)
 // --- Admin/Pedagogue data ---
 const turmasResumo = ref<{ id: string; nome: string; alunos: number }[]>([])
 const atividadesRecentes = ref<{ id: string; icone: string; descricao: string; tempo: string }[]>([])
+const paginaTurmas = ref(1)
+const itensPorPaginaTurmas = 5
+const totalPaginasTurmas = computed(() => Math.ceil(turmasResumo.value.length / itensPorPaginaTurmas))
+const turmasPaginadas = computed(() => {
+  const inicio = (paginaTurmas.value - 1) * itensPorPaginaTurmas
+  return turmasResumo.value.slice(inicio, inicio + itensPorPaginaTurmas)
+})
 
 // --- Teacher data ---
 const minhasTurmas = ref<{ id: string; nome: string; alunos: number }[]>([])

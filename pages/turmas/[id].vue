@@ -112,39 +112,6 @@
           <!-- SIDEBAR DIREITA (1/3) -->
           <div class="flex flex-col gap-6">
 
-            <!-- Ações Rápidas -->
-            <div class="bg-white border border-gray-200 rounded-xl p-5">
-              <div class="flex items-center gap-2 mb-4">
-                <Icone :tamanho="20">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
-                </Icone>
-                <h2 class="text-lg font-bold text-gray-900">Ações Rápidas</h2>
-              </div>
-
-              <div class="flex flex-col gap-3">
-                <Botao
-                  variante="primario"
-                  :largura-completa="true"
-                  @click="abrirModalScan"
-                >
-                  <div class="flex flex-col items-start py-1">
-                    <span class="font-semibold">Escanear Novas Provas</span>
-                    <span class="text-xs opacity-90">Processar lote de avaliações</span>
-                  </div>
-                </Botao>
-
-                <button
-                  class="flex items-center justify-between p-4 bg-white border border-gray-200 rounded-xl hover:shadow-sm transition"
-                  @click="exportarPDF"
-                >
-                  <span class="text-sm text-gray-700">Exportar Relatório PDF</span>
-                  <Icone :tamanho="18" class="text-gray-400">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m.75 12l3 3m0 0l3-3m-3 3v-6m-1.5-9H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
-                  </Icone>
-                </button>
-              </div>
-            </div>
-
             <!-- Resumo da Turma -->
             <div class="bg-white border border-gray-200 rounded-xl p-5">
               <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-4">Resumo da Turma</p>
@@ -190,7 +157,6 @@
 
 <script setup lang="ts">
 import { useRoute, navigateTo } from '#app'
-import Botao from '~/components/ui/Botao/Botao.vue'
 import Icone from '~/components/ui/Icone/Icone.vue'
 import Avatar from '~/components/ui/Avatar/Avatar.vue'
 import BarraProgresso from '~/components/data/BarraProgresso/BarraProgresso.vue'
@@ -264,14 +230,6 @@ const topicosMock = [
   { categoria: 'CONTEÚDO', nome: 'Tópico B', pontuacao: 45, tendencia: 'stable' as const, rotuloTendencia: '— Estável' },
   { categoria: 'CONTEÚDO', nome: 'Tópico C', pontuacao: 35, tendencia: 'down' as const, rotuloTendencia: 'Crítico' }
 ]
-
-const abrirModalScan = () => {
-  navigateTo(`/turmas/${turmaId}/escanear`)
-}
-
-const exportarPDF = () => {
-  // TODO: implementar exportação PDF
-}
 
 // Init
 onMounted(async () => {
