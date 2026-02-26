@@ -41,10 +41,21 @@
           />
         </div>
 
+        <!-- Loading -->
+        <div v-if="loadingTurmas" class="py-12 text-center">
+          <p class="text-sm text-gray-500">Carregando turmas...</p>
+        </div>
+
+        <!-- Empty state -->
+        <div v-else-if="turmasFormatadas.length === 0" class="py-12 text-center">
+          <p class="text-lg font-semibold text-gray-500 mb-2">Nenhuma turma encontrada</p>
+          <p class="text-sm text-gray-400">Crie uma nova turma para começar.</p>
+        </div>
+
         <!-- GRID DE TURMAS -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <CartaoTurma
-            v-for="turma in turmas"
+            v-for="turma in turmasFormatadas"
             :key="turma.to"
             :subject="turma.subject"
             :grade="turma.grade"
@@ -64,31 +75,29 @@
       @fechar="fecharModal"
     >
       <form @submit.prevent="criarTurma" class="space-y-5">
-        <CampoSelecao
-          id="disciplina"
-          v-model="formulario.disciplina"
-          rotulo="Disciplina"
-          texto-reservado="Selecione a disciplina"
-          :opcoes="opcoesDisciplina"
-          :erro="erros.disciplina"
+        <CampoFormulario
+          id="nomeTurma"
+          v-model="formulario.nome"
+          rotulo="Nome da Turma"
+          texto-reservado="Ex: Matemática 9º A"
+          :erro="erros.nome"
         />
 
         <div class="grid grid-cols-2 gap-4">
-          <CampoSelecao
+          <CampoFormulario
             id="serie"
             v-model="formulario.serie"
             rotulo="Série"
-            texto-reservado="Selecione a série"
-            :opcoes="opcoesSerie"
+            texto-reservado="Ex: 9º Ano"
             :erro="erros.serie"
           />
 
-          <CampoFormulario
-            id="turma"
-            v-model="formulario.turma"
-            rotulo="Turma"
-            texto-reservado="Ex: A, B, C"
-            :erro="erros.turma"
+          <CampoSelecao
+            id="turno"
+            v-model="formulario.turno"
+            rotulo="Turno"
+            texto-reservado="Selecione o turno"
+            :opcoes="opcoesTurno"
           />
         </div>
 
@@ -96,6 +105,7 @@
           id="anoLetivo"
           v-model="formulario.anoLetivo"
           rotulo="Ano Letivo"
+          texto-reservado="Selecione o ano letivo"
           :opcoes="opcoesAnoLetivo"
           :erro="erros.anoLetivo"
         />
@@ -105,13 +115,13 @@
         <Botao variante="contorno" @click="fecharModal">
           Cancelar
         </Botao>
-        <Botao variante="primario" @click="criarTurma">
+        <Botao variante="primario" @click="criarTurma" :desabilitado="criandoTurma">
           <template #icone-esquerda>
             <Icone :tamanho="16">
               <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
             </Icone>
           </template>
-          Criar Turma
+          {{ criandoTurma ? 'Criando...' : 'Criar Turma' }}
         </Botao>
       </template>
     </Modal>
@@ -119,7 +129,6 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
 import Botao from '~/components/ui/Botao/Botao.vue'
 import Icone from '~/components/ui/Icone/Icone.vue'
 import Modal from '~/components/feedback/Modal/Modal.vue'
@@ -134,136 +143,121 @@ definePageMeta({
   requiredRole: ['admin', 'pedagogue', 'teacher']
 })
 
+const supabase = useSupabaseClient()
+const { usuario } = useUsuario()
 const { canManageClasses } = usePermissions()
+const { classes, fetchClasses, createClass } = useClasses()
+const { academicYears, fetchAcademicYears } = useAcademicYear()
+const { countAssignments } = useAssignments()
 
-const stats = [
+const loadingTurmas = ref(true)
+const studentCounts = ref<Record<string, number>>({})
+const totalAssignments = ref(0)
+
+// Fetch student counts for each class
+const fetchStudentCounts = async () => {
+  const result: Record<string, number> = {}
+  for (const c of classes.value) {
+    const { count } = await supabase
+      .from('class_students')
+      .select('student_id', { count: 'exact', head: true })
+      .eq('class_id', c.id)
+    result[c.id] = count || 0
+  }
+  studentCounts.value = result
+}
+
+// Stats
+const totalAlunos = computed(() =>
+  Object.values(studentCounts.value).reduce((a, b) => a + b, 0)
+)
+
+const stats = computed(() => [
   {
     rotulo: 'Total de Alunos',
-    valor: 168,
+    valor: totalAlunos.value,
     icone: '👥',
     fundoIcone: 'bg-[#e8edff]'
   },
   {
-    rotulo: 'Média Geral',
-    valor: 78,
-    formato: 'porcentagem' as const,
-    icone: '📈',
+    rotulo: 'Turmas Ativas',
+    valor: classes.value.length,
+    icone: '📚',
     fundoIcone: 'bg-[#e6f4ea]'
   },
   {
-    rotulo: 'Correções Pendentes',
-    valor: 12,
+    rotulo: 'Avaliações',
+    valor: totalAssignments.value,
     icone: '📋',
     fundoIcone: 'bg-[#fff3e0]'
   }
-]
+])
 
-const turmas = [
-  {
-    subject: 'Matemática',
-    grade: '9º Ano A',
-    studentCount: 24,
-    healthScore: 82,
-    aiSummary: 'Excelente domínio dos tópicos recentes.',
-    icon: 'sigma',
-    iconBg: '#6f42c1',
-    to: '/turmas/matematica-9a'
-  },
-  {
-    subject: 'Física',
-    grade: '1º Ano Ensino Médio',
-    studentCount: 30,
-    healthScore: 65,
-    aiSummary: 'Atenção necessária em Dinâmica.',
-    icon: 'rocket',
-    iconBg: '#6f42c1',
-    to: '/turmas/fisica-1em'
-  },
-  {
-    subject: 'História',
-    grade: '8º Ano B',
-    studentCount: 28,
-    healthScore: 92,
-    aiSummary: 'Turma com desempenho excepcional.',
-    icon: 'book-open',
-    iconBg: '#f59e0b',
-    to: '/turmas/historia-8b'
-  },
-  {
-    subject: 'Geografia',
-    grade: '9º Ano C',
-    studentCount: 25,
-    healthScore: 78,
-    aiSummary: 'Bom desempenho geral.',
-    icon: 'globe',
-    iconBg: '#20c997',
-    to: '/turmas/geografia-9c'
-  },
-  {
-    subject: 'Química',
-    grade: '2º Ano Ensino Médio',
-    studentCount: 32,
-    healthScore: 45,
-    aiSummary: 'Alto índice de dificuldades em Estequiometria.',
-    icon: 'flask-conical',
-    iconBg: '#dc3545',
-    to: '/turmas/quimica-2em'
-  },
-  {
-    subject: 'Biologia',
-    grade: '1º Ano Ensino Médio',
-    studentCount: 29,
-    healthScore: 88,
-    aiSummary: 'Turma participativa e engajada.',
-    icon: 'leaf',
-    iconBg: '#28a745',
-    to: '/turmas/biologia-1em'
+// Subject icon mapping
+const iconMap: Record<string, { icon: string; bg: string }> = {
+  'matemática': { icon: 'sigma', bg: '#6f42c1' },
+  'física': { icon: 'rocket', bg: '#6f42c1' },
+  'história': { icon: 'book-open', bg: '#f59e0b' },
+  'geografia': { icon: 'globe', bg: '#20c997' },
+  'química': { icon: 'flask-conical', bg: '#dc3545' },
+  'biologia': { icon: 'leaf', bg: '#28a745' },
+  'português': { icon: 'book-open', bg: '#1132d4' },
+  'língua portuguesa': { icon: 'book-open', bg: '#1132d4' },
+  'inglês': { icon: 'globe', bg: '#0dcaf0' }
+}
+
+const getIconForClass = (className: string) => {
+  const lower = className.toLowerCase()
+  for (const [key, val] of Object.entries(iconMap)) {
+    if (lower.includes(key)) return val
   }
-]
+  return { icon: 'book-open', bg: '#6f42c1' }
+}
+
+// Format classes for CartaoTurma
+const turmasFormatadas = computed(() =>
+  classes.value.map(c => {
+    const { icon, bg } = getIconForClass(c.name)
+    return {
+      subject: c.name,
+      grade: c.grade_level || '',
+      studentCount: studentCounts.value[c.id] || 0,
+      healthScore: 0,
+      aiSummary: c.academic_years?.name || '',
+      icon,
+      iconBg: bg,
+      to: `/turmas/${c.id}`
+    }
+  })
+)
 
 // Modal Criar Turma
 const modalAberto = ref(false)
+const criandoTurma = ref(false)
 
 const formulario = reactive({
-  disciplina: '' as string | number,
+  nome: '' as string | number,
   serie: '' as string | number,
-  turma: '' as string | number,
-  anoLetivo: '2023' as string | number
+  turno: '' as string | number,
+  anoLetivo: '' as string | number
 })
 
 const erros = reactive({
-  disciplina: '',
+  nome: '',
   serie: '',
-  turma: '',
   anoLetivo: ''
 })
 
-const opcoesDisciplina = [
-  { rotulo: 'Matemática', valor: 'matematica' },
-  { rotulo: 'Física', valor: 'fisica' },
-  { rotulo: 'Química', valor: 'quimica' },
-  { rotulo: 'Biologia', valor: 'biologia' },
-  { rotulo: 'História', valor: 'historia' },
-  { rotulo: 'Geografia', valor: 'geografia' },
-  { rotulo: 'Português', valor: 'portugues' },
-  { rotulo: 'Inglês', valor: 'ingles' }
+const opcoesTurno = [
+  { rotulo: 'Matutino', valor: 'matutino' },
+  { rotulo: 'Vespertino', valor: 'vespertino' },
+  { rotulo: 'Noturno', valor: 'noturno' },
+  { rotulo: 'Integral', valor: 'integral' }
 ]
 
-const opcoesSerie = [
-  { rotulo: '6º Ano', valor: '6-ano' },
-  { rotulo: '7º Ano', valor: '7-ano' },
-  { rotulo: '8º Ano', valor: '8-ano' },
-  { rotulo: '9º Ano', valor: '9-ano' },
-  { rotulo: '1º Ano EM', valor: '1-em' },
-  { rotulo: '2º Ano EM', valor: '2-em' },
-  { rotulo: '3º Ano EM', valor: '3-em' }
-]
-
-const opcoesAnoLetivo = [
-  { rotulo: '2023', valor: '2023' },
-  { rotulo: '2024', valor: '2024' },
-  { rotulo: '2025', valor: '2025' }
-]
+const opcoesAnoLetivo = computed(() =>
+  academicYears.value.map(ay => ({ rotulo: ay.name, valor: ay.id }))
+)
 
 const abrirModalCriarTurma = () => {
   modalAberto.value = true
@@ -271,45 +265,52 @@ const abrirModalCriarTurma = () => {
 
 const fecharModal = () => {
   modalAberto.value = false
-  formulario.disciplina = ''
+  formulario.nome = ''
   formulario.serie = ''
-  formulario.turma = ''
-  formulario.anoLetivo = '2023'
-  erros.disciplina = ''
+  formulario.turno = ''
+  formulario.anoLetivo = ''
+  erros.nome = ''
   erros.serie = ''
-  erros.turma = ''
   erros.anoLetivo = ''
 }
 
-const criarTurma = () => {
-  erros.disciplina = ''
+const criarTurma = async () => {
+  erros.nome = ''
   erros.serie = ''
-  erros.turma = ''
   erros.anoLetivo = ''
 
   let valido = true
 
-  if (!formulario.disciplina) {
-    erros.disciplina = 'Selecione uma disciplina'
-    valido = false
-  }
-  if (!formulario.serie) {
-    erros.serie = 'Selecione a série'
-    valido = false
-  }
-  if (!formulario.turma) {
-    erros.turma = 'Informe a turma'
-    valido = false
-  }
-  if (!formulario.anoLetivo) {
-    erros.anoLetivo = 'Selecione o ano letivo'
+  if (!formulario.nome) {
+    erros.nome = 'Informe o nome da turma'
     valido = false
   }
 
   if (!valido) return
 
-  // TODO: enviar dados para API
-  console.log('Turma criada:', { ...formulario })
-  fecharModal()
+  criandoTurma.value = true
+  try {
+    await createClass({
+      name: String(formulario.nome),
+      grade_level: formulario.serie ? String(formulario.serie) : undefined,
+      shift: formulario.turno ? String(formulario.turno) : undefined,
+      academic_year_id: formulario.anoLetivo ? String(formulario.anoLetivo) : undefined
+    })
+    fecharModal()
+    await fetchClasses()
+    await fetchStudentCounts()
+  } catch {
+    // error is handled by useClasses
+  } finally {
+    criandoTurma.value = false
+  }
 }
+
+// Init
+onMounted(async () => {
+  await Promise.all([fetchClasses(), fetchAcademicYears()])
+  await fetchStudentCounts()
+  totalAssignments.value = await countAssignments()
+  loadingTurmas.value = false
+})
 </script>

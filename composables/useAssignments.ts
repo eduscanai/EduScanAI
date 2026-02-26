@@ -22,10 +22,29 @@ export const useAssignments = () => {
   const supabase = useSupabaseClient()
   const { usuario } = useUsuario()
   const user = useSupabaseUser()
+  const { isTeacher, isStudent } = usePermissions()
 
   const assignments = ref<Assignment[]>([])
   const loading = ref(false)
   const error = ref<string | null>(null)
+
+  // Helper: get teacher's class IDs
+  const getTeacherClassIds = async (): Promise<string[]> => {
+    const { data } = await supabase
+      .from('class_teachers')
+      .select('class_id')
+      .eq('teacher_id', user.value!.id)
+    return data?.map((c: any) => c.class_id) || []
+  }
+
+  // Helper: get student's class IDs
+  const getStudentClassIds = async (): Promise<string[]> => {
+    const { data } = await supabase
+      .from('class_students')
+      .select('class_id')
+      .eq('student_id', user.value!.id)
+    return data?.map((c: any) => c.class_id) || []
+  }
 
   const listAssignments = async (classId?: string, status?: string) => {
     loading.value = true
@@ -36,7 +55,18 @@ export const useAssignments = () => {
         .select('*, classes(name), subjects(name), profiles(full_name)')
         .order('created_at', { ascending: false })
 
-      if (classId) query = query.eq('class_id', classId)
+      if (classId) {
+        query = query.eq('class_id', classId)
+      } else if (isTeacher.value) {
+        const classIds = await getTeacherClassIds()
+        if (classIds.length === 0) { assignments.value = []; return }
+        query = query.in('class_id', classIds)
+      } else if (isStudent.value) {
+        const classIds = await getStudentClassIds()
+        if (classIds.length === 0) { assignments.value = []; return }
+        query = query.in('class_id', classIds).eq('status', 'published')
+      }
+
       if (status) query = query.eq('status', status)
 
       const { data, error: err } = await query
@@ -46,6 +76,78 @@ export const useAssignments = () => {
       error.value = e.message
     } finally {
       loading.value = false
+    }
+  }
+
+  const countAssignments = async () => {
+    try {
+      let query = supabase
+        .from('assignments')
+        .select('id', { count: 'exact', head: true })
+
+      if (isTeacher.value) {
+        const classIds = await getTeacherClassIds()
+        if (classIds.length === 0) return 0
+        query = query.in('class_id', classIds)
+      } else {
+        query = query.eq('school_id', usuario.value.schoolId)
+      }
+
+      const { count } = await query
+      return count || 0
+    } catch {
+      return 0
+    }
+  }
+
+  const fetchRecentAssignments = async (limit = 5) => {
+    try {
+      let query = supabase
+        .from('assignments')
+        .select('*, classes(name), subjects(name), profiles(full_name)')
+        .order('created_at', { ascending: false })
+        .limit(limit)
+
+      if (isTeacher.value) {
+        const classIds = await getTeacherClassIds()
+        if (classIds.length === 0) return []
+        query = query.in('class_id', classIds)
+      } else {
+        query = query.eq('school_id', usuario.value.schoolId)
+      }
+
+      const { data, error: err } = await query
+      if (err) throw err
+      return (data || []) as Assignment[]
+    } catch {
+      return []
+    }
+  }
+
+  const fetchPendingForStudent = async () => {
+    try {
+      const classIds = await getStudentClassIds()
+      if (classIds.length === 0) return []
+
+      const { data: allAssignments, error: err1 } = await supabase
+        .from('assignments')
+        .select('*, classes(name), subjects(name)')
+        .in('class_id', classIds)
+        .eq('status', 'published')
+        .order('due_date', { ascending: true })
+
+      if (err1) throw err1
+      if (!allAssignments || allAssignments.length === 0) return []
+
+      const { data: mySubmissions } = await supabase
+        .from('submissions')
+        .select('assignment_id')
+        .eq('student_id', user.value!.id)
+
+      const submittedIds = new Set((mySubmissions || []).map((s: any) => s.assignment_id))
+      return (allAssignments as any[]).filter(a => !submittedIds.has(a.id))
+    } catch {
+      return []
     }
   }
 
@@ -151,6 +253,7 @@ export const useAssignments = () => {
   return {
     assignments, loading, error,
     listAssignments, getAssignment, createAssignment,
-    updateAssignment, publishAssignment, closeAssignment, deleteAssignment
+    updateAssignment, publishAssignment, closeAssignment, deleteAssignment,
+    countAssignments, fetchRecentAssignments, fetchPendingForStudent
   }
 }

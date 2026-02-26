@@ -1,27 +1,33 @@
 <template>
   <div>
+        <!-- Loading -->
+        <div v-if="loadingPage" class="py-12 text-center">
+          <p class="text-sm text-gray-500">Carregando perfil do aluno...</p>
+        </div>
+
+        <template v-else-if="alunoData">
         <!-- Header do Aluno -->
         <div class="flex flex-col md:flex-row md:justify-between md:items-start mb-8 gap-4">
           <div class="flex items-center gap-5">
             <Avatar
-              :image="aluno.avatar"
-              :alt="aluno.nome"
+              :image="alunoData.avatar_url || ''"
+              :alt="alunoData.full_name || ''"
               :size="72"
             />
             <div>
               <div class="flex items-center gap-3">
-                <h1 class="text-3xl font-black text-gray-900">{{ aluno.nome }}</h1>
-                <Etiqueta :variante="varianteStatus(aluno.status)">
-                  {{ aluno.statusTexto }}
+                <h1 class="text-3xl font-black text-gray-900">{{ alunoData.full_name || 'Sem nome' }}</h1>
+                <Etiqueta :variante="statusVariante">
+                  {{ statusTexto }}
                 </Etiqueta>
               </div>
-              <p class="text-base text-gray-500 mt-1">{{ aluno.serie }} • {{ aluno.disciplina }}</p>
-              <div class="flex items-center gap-4 mt-2 text-sm text-gray-400">
+              <p class="text-base text-gray-500 mt-1">{{ turmaData?.name || '' }}{{ turmaData?.grade_level ? ` · ${turmaData.grade_level}` : '' }}</p>
+              <div v-if="ultimaNota" class="flex items-center gap-4 mt-2 text-sm text-gray-400">
                 <span class="flex items-center gap-1">
                   <Icone :tamanho="14">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
                   </Icone>
-                  Última avaliação: {{ aluno.dataUltimaProva }}
+                  Última avaliação: {{ ultimaNota }}
                 </span>
               </div>
             </div>
@@ -47,27 +53,15 @@
           <!-- Performance Geral -->
           <div class="bg-white border border-gray-200 rounded-2xl p-6">
             <div class="flex justify-between items-center mb-5">
-              <div class="flex items-center gap-3">
-                <h2 class="text-lg font-bold text-gray-900">Performance Geral</h2>
-                <div class="flex items-center gap-1.5 px-2.5 py-1 bg-green-50 border border-green-200 rounded-full">
-                  <Icone :tamanho="12" class="text-green-600">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.28m5.94 2.28l-2.28 5.941" />
-                  </Icone>
-                  <span class="text-xs font-semibold text-green-600">+15%</span>
-                </div>
-              </div>
-              <select
-                v-model="periodoPerformance"
-                class="text-sm text-gray-500 bg-transparent border-none outline-none cursor-pointer font-medium appearance-none"
-              >
-                <option v-for="op in opcoesPeriodoPerformance" :key="op.valor" :value="op.valor">
-                  {{ op.rotulo }}
-                </option>
-              </select>
+              <h2 class="text-lg font-bold text-gray-900">Performance Geral</h2>
             </div>
 
-            <ClientOnly>
-              <GraficoPerformance :dados="dadosPerformanceFiltrados" />
+            <div v-if="dadosPerformance.rotulos.length === 0" class="w-full h-64 flex flex-col items-center justify-center bg-gray-50 rounded-lg">
+              <span class="text-3xl mb-2">📈</span>
+              <p class="text-sm font-medium text-gray-500">Sem dados de notas</p>
+            </div>
+            <ClientOnly v-else>
+              <GraficoPerformance :dados="dadosPerformance" />
               <template #fallback>
                 <div class="w-full h-64 flex items-center justify-center bg-gray-50 rounded-lg">
                   <p class="text-gray-500">Carregando gráfico...</p>
@@ -76,25 +70,17 @@
             </ClientOnly>
           </div>
 
-          <!-- Análise de Competências -->
+          <!-- Análise de Competências (MOCK — sem tabela topic_proficiency) -->
           <div class="bg-white border border-gray-200 rounded-2xl p-6">
             <div class="flex justify-between items-center mb-5">
               <h2 class="text-lg font-bold text-gray-900">Análise de Competências</h2>
-              <select
-                v-model="periodoCompetencias"
-                class="text-sm text-gray-500 bg-transparent border-none outline-none cursor-pointer font-medium appearance-none"
-              >
-                <option v-for="op in opcoesPeriodoPerformance" :key="op.valor" :value="op.valor">
-                  {{ op.rotulo }}
-                </option>
-              </select>
             </div>
 
             <!-- Legenda -->
             <div class="flex items-center gap-5 mb-4">
               <div class="flex items-center gap-1.5">
                 <span class="w-2.5 h-2.5 rounded-full bg-primary-500"></span>
-                <span class="text-xs text-gray-600">{{ aluno.nome }}</span>
+                <span class="text-xs text-gray-600">{{ alunoData.full_name }}</span>
               </div>
               <div class="flex items-center gap-1.5">
                 <span class="w-2.5 h-2.5 rounded-full bg-gray-300"></span>
@@ -117,13 +103,13 @@
 
         </div>
 
-        <!-- Nuvem de Tópicos -->
+        <!-- Nuvem de Tópicos (MOCK) -->
         <div class="bg-white border border-gray-200 rounded-2xl p-6 mb-8">
           <h2 class="text-lg font-bold text-gray-900">Nuvem de Tópicos</h2>
           <p class="text-sm text-gray-500 mt-1 mb-5">Proficiência por tema</p>
 
           <div class="flex flex-wrap gap-8">
-            <div v-for="grupo in aluno.gruposTopicos" :key="grupo.nivel">
+            <div v-for="grupo in gruposTopicosMock" :key="grupo.nivel">
               <div class="flex items-center gap-2 mb-2">
                 <Icone
                   :tamanho="16"
@@ -166,83 +152,6 @@
           </div>
         </div>
 
-        <!-- O que a IA detectou -->
-        <div class="bg-[#f0f4ff] border-l-4 border-primary-500 rounded-2xl p-6 mb-8">
-          <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-12">
-            <!-- Texto -->
-            <div class="flex-1">
-              <div class="flex items-center gap-2 mb-2">
-                <Icone :tamanho="20" class="text-primary-500">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" />
-                </Icone>
-                <h2 class="text-lg font-bold text-gray-900">O que a IA detectou</h2>
-              </div>
-              <p class="text-sm text-gray-600 leading-relaxed">
-                Ana apresenta dificuldade consistente em <strong class="text-gray-900">operações básicas</strong> e
-                <strong class="text-gray-900">interpretação de problemas</strong>, com queda de rendimento no 2º trimestre.
-                Porém, demonstra boa evolução em <strong class="text-gray-900">geometria plana</strong> e
-                <strong class="text-gray-900">probabilidade</strong>. Recomenda-se foco em exercícios práticos de álgebra
-                e reforço na leitura de enunciados.
-              </p>
-            </div>
-
-            <!-- Ação -->
-            <div class="shrink-0">
-              <!-- Estado inicial: botão gerar -->
-              <Botao
-                v-if="!gerandoPlano && !planoGerado"
-                variante="primario"
-                icone="alvo"
-                posicao-icone="esquerda"
-                @click="gerarPlanoAtividades"
-              >
-                <template #icone-esquerda>
-                  <Icone :tamanho="16">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
-                  </Icone>
-                </template>
-                <template #default>Gerar Plano de Atividades</template>
-              </Botao>
-
-              <!-- Barra de progresso -->
-              <div v-else-if="gerandoPlano" class="w-64">
-                <div class="flex items-center justify-between mb-1.5">
-                  <span class="text-xs font-semibold text-primary-500">{{ etapaPlano }}</span>
-                  <span class="text-xs font-semibold text-gray-500">{{ progressoPlano }}%</span>
-                </div>
-                <div class="w-full h-2 bg-white rounded-full overflow-hidden">
-                  <div
-                    class="h-full bg-primary-500 rounded-full transition-all duration-500 ease-out"
-                    :style="{ width: progressoPlano + '%' }"
-                  ></div>
-                </div>
-              </div>
-
-              <!-- Plano gerado: botões -->
-              <div v-else class="flex items-center gap-2">
-                <Botao variante="primario" icone="alvo" posicao-icone="esquerda" @click="gerarPlanoAtividades">
-                  <template #icone-esquerda>
-                    <Icone :tamanho="16">
-                      <path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
-                      <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
-                    </Icone>
-                  </template>
-                  <template #default>Gerar Plano de Atividades</template>
-                </Botao>
-                <Botao variante="contorno" icone="pdf" posicao-icone="esquerda" @click="exportarPDF">
-                  <template #icone-esquerda>
-                    <Icone :tamanho="16">
-                      <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
-                    </Icone>
-                  </template>
-                  <template #default>PDF</template>
-                </Botao>
-              </div>
-            </div>
-          </div>
-        </div>
-
         <!-- Pasta Digital -->
         <div>
           <div class="flex justify-between items-center mb-4">
@@ -263,18 +172,21 @@
             </button>
           </div>
 
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div v-if="provasRecentes.length === 0" class="py-6 text-center bg-white border border-gray-200 rounded-xl">
+            <p class="text-sm text-gray-500">Nenhuma prova corrigida nesta turma.</p>
+          </div>
+          <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <CartaoProva
-              v-for="prova in aluno.provas"
+              v-for="prova in provasRecentes"
               :key="prova.id"
               :titulo="prova.titulo"
               :data="prova.data"
               :categoria="prova.categoria"
               :nota="prova.nota"
-              @click="navigateTo(`/turmas/${turmaId}/alunos/${alunoId}/provas/${prova.id}`)"
             />
           </div>
         </div>
+        </template>
   </div>
 </template>
 
@@ -309,64 +221,70 @@ definePageMeta({
   requiredRole: ['admin', 'pedagogue', 'teacher']
 })
 
-// Filtros de período
-const periodoPerformance = ref('ano-todo')
-const periodoCompetencias = ref('ano-todo')
+const supabase = useSupabaseClient()
+const { fetchUser } = useUsers()
+const { fetchClass } = useClasses()
+const { fetchStudentScoresOverTime } = useSubmissions()
 
-const opcoesPeriodoPerformance = [
-  { rotulo: 'Ano Todo', valor: 'ano-todo' },
-  { rotulo: '1º Trimestre', valor: '1tri' },
-  { rotulo: '2º Trimestre', valor: '2tri' },
-  { rotulo: '3º Trimestre', valor: '3tri' }
-]
+const loadingPage = ref(true)
+const alunoData = ref<any>(null)
+const turmaData = ref<any>(null)
+const rawSubmissions = ref<any[]>([])
+const dadosPerformance = ref<{ rotulos: string[]; valores: number[] }>({ rotulos: [], valores: [] })
 
-// Dados de performance por período
-const dadosPerformancePorPeriodo: Record<string, { rotulos: string[]; valores: number[] }> = {
-  'ano-todo': {
-    rotulos: ['MAI', 'JUN', 'JUL', 'AGO', 'SET', 'OUT'],
-    valores: [2.3, 3.8, 4.2, 5.0, 6.5, 7.8]
-  },
-  '1tri': {
-    rotulos: ['MAR', 'ABR'],
-    valores: [2.3, 3.8]
-  },
-  '2tri': {
-    rotulos: ['MAI', 'JUN', 'JUL'],
-    valores: [4.2, 5.0, 5.5]
-  },
-  '3tri': {
-    rotulos: ['AGO', 'SET', 'OUT'],
-    valores: [6.5, 6.8, 7.8]
-  }
+// Format date
+const formatarData = (dateStr: string) => {
+  const d = new Date(dateStr)
+  const meses = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
+  return `${d.getDate()} ${meses[d.getMonth()]} ${d.getFullYear()}`
 }
 
-const dadosPerformanceFiltrados = computed(() => {
-  return dadosPerformancePorPeriodo[periodoPerformance.value] || dadosPerformancePorPeriodo['ano-todo']
+// Status based on average
+const mediaAluno = computed(() => {
+  if (rawSubmissions.value.length === 0) return 0
+  return rawSubmissions.value.reduce((acc, s) => {
+    const maxScore = s.assignments?.max_score || 10
+    return acc + (s.score / maxScore) * 10
+  }, 0) / rawSubmissions.value.length
 })
 
-// Dados do radar por período
-const dadosCompetenciasPorPeriodo: Record<string, { aluno: number[]; turma: number[] }> = {
-  'ano-todo': {
-    aluno: [7.8, 4.5, 6.2, 8.5, 5.0, 7.0],
-    turma: [6.5, 6.0, 6.8, 7.0, 6.2, 6.5]
-  },
-  '1tri': {
-    aluno: [3.5, 2.8, 4.0, 5.5, 3.2, 4.0],
-    turma: [5.8, 5.5, 6.0, 6.2, 5.8, 6.0]
-  },
-  '2tri': {
-    aluno: [5.5, 3.8, 5.2, 7.0, 4.0, 5.5],
-    turma: [6.2, 5.8, 6.5, 6.8, 6.0, 6.2]
-  },
-  '3tri': {
-    aluno: [7.8, 4.5, 6.2, 8.5, 5.0, 7.0],
-    turma: [6.5, 6.0, 6.8, 7.0, 6.2, 6.5]
-  }
-}
+const statusVariante = computed(() => {
+  if (mediaAluno.value >= 7) return 'dominado' as const
+  if (mediaAluno.value >= 5) return 'em-progresso' as const
+  return 'em-risco' as const
+})
 
+const statusTexto = computed(() => {
+  if (mediaAluno.value >= 7) return 'Bom Desempenho'
+  if (mediaAluno.value >= 5) return 'Em Evolução'
+  return 'Necessita Atenção'
+})
+
+const ultimaNota = computed(() => {
+  if (rawSubmissions.value.length === 0) return ''
+  const last = rawSubmissions.value[0]
+  if (!last.graded_at) return ''
+  const d = new Date(last.graded_at)
+  const meses = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
+  return `${d.getDate()} ${meses[d.getMonth()]}`
+})
+
+// Provas recentes (from submissions in this class)
+const provasRecentes = computed(() =>
+  rawSubmissions.value.slice(0, 4).map(s => {
+    const maxScore = s.assignments?.max_score || 10
+    return {
+      id: s.id,
+      titulo: s.assignments?.title || 'Avaliação',
+      data: s.graded_at ? formatarData(s.graded_at) : '',
+      categoria: s.assignments?.subjects?.name || 'Geral',
+      nota: Math.round((s.score / maxScore) * 100) / 10
+    }
+  })
+)
+
+// Radar chart (MOCK — sem tabela topic_proficiency)
 const competenciasRotulos = ['Geometria', 'Funções', 'Álgebra', 'Probabilidade', 'Equações', 'Estatística']
-
-// Radar chart
 const radarRef = ref<HTMLCanvasElement | null>(null)
 let radarInstancia: Chart | null = null
 
@@ -377,16 +295,14 @@ const criarRadar = () => {
 
   if (radarInstancia) radarInstancia.destroy()
 
-  const dados = dadosCompetenciasPorPeriodo[periodoCompetencias.value] || dadosCompetenciasPorPeriodo['ano-todo']
-
   radarInstancia = new Chart(ctx, {
     type: 'radar',
     data: {
       labels: competenciasRotulos,
       datasets: [
         {
-          label: aluno.nome,
-          data: dados.aluno,
+          label: alunoData.value?.full_name || 'Aluno',
+          data: [7.8, 4.5, 6.2, 8.5, 5.0, 7.0],
           borderColor: '#1132d4',
           backgroundColor: 'rgba(17, 50, 212, 0.15)',
           borderWidth: 2,
@@ -397,7 +313,7 @@ const criarRadar = () => {
         },
         {
           label: 'Média da Turma',
-          data: dados.turma,
+          data: [6.5, 6.0, 6.8, 7.0, 6.2, 6.5],
           borderColor: '#d1d5db',
           backgroundColor: 'rgba(209, 213, 219, 0.15)',
           borderWidth: 2,
@@ -446,13 +362,24 @@ const criarRadar = () => {
   })
 }
 
-onMounted(() => {
-  criarRadar()
-})
-
-watch(periodoCompetencias, () => {
-  criarRadar()
-})
+// Topic groups (MOCK)
+const gruposTopicosMock = [
+  {
+    nivel: 'critico',
+    rotulo: 'Crítico (Revisar Urgente)',
+    topicos: ['Equações de 1º grau', 'Funções']
+  },
+  {
+    nivel: 'desenvolvimento',
+    rotulo: 'Em Desenvolvimento',
+    topicos: ['Regra de Três', 'Porcentagem', 'Álgebra Básica']
+  },
+  {
+    nivel: 'dominado',
+    rotulo: 'Domina',
+    topicos: ['Frações', 'Geometria Plana', 'Probabilidade', 'Conjuntos']
+  }
+]
 
 const corGrupoTopico = (nivel: string) => {
   if (nivel === 'critico') return 'text-red-600'
@@ -466,124 +393,43 @@ const classeTagTopico = (nivel: string) => {
   return 'border-green-200 bg-green-50 text-green-700'
 }
 
-const varianteStatus = (status: string) => {
-  const map: Record<string, 'dominado' | 'em-progresso' | 'em-risco'> = {
-    'em_evolucao': 'em-progresso',
-    'excelente': 'dominado',
-    'atencao': 'em-risco'
-  }
-  return map[status] || 'em-progresso'
-}
-
-// TODO: substituir por useFetch() quando conectar ao backend
-const aluno = {
-  nome: 'Ana Silva',
-  iniciais: 'AS',
-  avatar: '',
-  status: 'em_evolucao',
-  statusTexto: 'Em Evolução',
-  serie: '8º Ano B',
-  disciplina: 'Matemática',
-  dataUltimaProva: '12 Out',
-  gruposTopicos: [
-    {
-      nivel: 'critico',
-      rotulo: 'Crítico (Revisar Urgente)',
-      topicos: ['Equações de 1º grau', 'Funções']
-    },
-    {
-      nivel: 'desenvolvimento',
-      rotulo: 'Em Desenvolvimento',
-      topicos: ['Regra de Três', 'Porcentagem', 'Álgebra Básica']
-    },
-    {
-      nivel: 'dominado',
-      rotulo: 'Domina',
-      topicos: ['Frações', 'Geometria Plana', 'Probabilidade', 'Conjuntos']
-    }
-  ],
-  provas: [
-    {
-      id: 'prova-3tri',
-      titulo: 'Prova Mensal - 3º Tri',
-      data: '12 Out 2023',
-      categoria: 'Álgebra',
-      nota: 4.5
-    },
-    {
-      id: 'lista-04',
-      titulo: 'Lista de Exercícios 04',
-      data: '28 Set 2023',
-      categoria: 'Funções',
-      nota: 6.8
-    },
-    {
-      id: 'trabalho-grupo',
-      titulo: 'Trabalho em Grupo',
-      data: '15 Set 2023',
-      categoria: 'Geometria',
-      nota: 9.5
-    },
-    {
-      id: 'simulado',
-      titulo: 'Simulado Nacional',
-      data: '01 Set 2023',
-      categoria: 'Geral',
-      nota: 8.0
-    }
-  ]
-}
-
-const manipularBusca = (query: string) => {
-  console.log('Busca:', query)
-}
-
 const gerarPlano = () => {
   console.log('Gerar plano personalizado')
 }
 
-const gerandoPlano = ref(false)
-const planoGerado = ref(false)
-const progressoPlano = ref(0)
-const etapaPlano = ref('')
+// Init
+onMounted(async () => {
+  const [userData, classData] = await Promise.all([
+    fetchUser(alunoId),
+    fetchClass(turmaId)
+  ])
+  alunoData.value = userData
+  turmaData.value = classData
 
-const etapasPlano = [
-  { progresso: 15, texto: 'Analisando dados...' },
-  { progresso: 40, texto: 'Identificando lacunas...' },
-  { progresso: 65, texto: 'Gerando atividades...' },
-  { progresso: 85, texto: 'Montando plano...' },
-  { progresso: 100, texto: 'Concluído!' }
-]
+  // Fetch submissions for this student in this class's assignments
+  const { data: classAssignments } = await supabase
+    .from('assignments')
+    .select('id')
+    .eq('class_id', turmaId)
 
-const gerarPlanoAtividades = () => {
-  gerandoPlano.value = true
-  planoGerado.value = false
-  progressoPlano.value = 0
-  etapaPlano.value = etapasPlano[0].texto
-
-  let i = 0
-  const avancar = () => {
-    if (i >= etapasPlano.length) return
-    progressoPlano.value = etapasPlano[i].progresso
-    etapaPlano.value = etapasPlano[i].texto
-    i++
-    if (i < etapasPlano.length) {
-      setTimeout(avancar, 800 + Math.random() * 600)
-    } else {
-      setTimeout(() => {
-        gerandoPlano.value = false
-        planoGerado.value = true
-      }, 1200)
-    }
+  if (classAssignments && classAssignments.length > 0) {
+    const assignmentIds = classAssignments.map((a: any) => a.id)
+    const { data: subs } = await supabase
+      .from('submissions')
+      .select('*, assignments(id, title, max_score, subject_id, subjects(id, name))')
+      .eq('student_id', alunoId)
+      .in('assignment_id', assignmentIds)
+      .not('score', 'is', null)
+      .order('graded_at', { ascending: false })
+    rawSubmissions.value = (subs || []) as any[]
   }
-  setTimeout(avancar, 400)
-}
 
-const exportarPDF = () => {
-  console.log('Exportar diagnóstico em PDF')
-}
+  // Fetch performance chart data
+  dadosPerformance.value = await fetchStudentScoresOverTime(alunoId)
 
-const compartilharDiagnostico = () => {
-  console.log('Compartilhar diagnóstico')
-}
+  loadingPage.value = false
+
+  // Create radar after DOM update
+  nextTick(() => criarRadar())
+})
 </script>

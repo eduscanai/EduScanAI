@@ -154,5 +154,54 @@ export const useUsers = () => {
     }
   }
 
-  return { users, total, loading, error, fetchUsers, fetchUser, updateUser, toggleUserActive, createUser, bulkCreateUsers }
+  const fetchStudentsList = async (params: { search?: string; classId?: string; page?: number; perPage?: number } = {}) => {
+    const { search = '', classId = '', page = 1, perPage = 20 } = params
+    if (!usuario.value.schoolId) return { students: [] as Profile[], total: 0 }
+
+    loading.value = true
+    error.value = null
+    try {
+      let studentIds: string[] | null = null
+
+      if (classId) {
+        const { data: classStudents } = await supabase
+          .from('class_students')
+          .select('student_id')
+          .eq('class_id', classId)
+        studentIds = classStudents?.map((cs: any) => cs.student_id) || []
+        if (studentIds.length === 0) return { students: [] as Profile[], total: 0 }
+      }
+
+      let query = supabase
+        .from('profiles')
+        .select('*', { count: 'exact' })
+        .eq('school_id', usuario.value.schoolId)
+        .eq('role', 'student')
+        .order('full_name')
+
+      if (studentIds) {
+        query = query.in('id', studentIds)
+      }
+
+      if (search) {
+        query = query.or(`full_name.ilike.%${search}%,email.ilike.%${search}%,matricula.ilike.%${search}%`)
+      }
+
+      const from = (page - 1) * perPage
+      const to = from + perPage - 1
+      query = query.range(from, to)
+
+      const { data, error: err, count } = await query
+      if (err) throw err
+
+      return { students: (data || []) as Profile[], total: count || 0 }
+    } catch (e: any) {
+      error.value = e.message
+      return { students: [] as Profile[], total: 0 }
+    } finally {
+      loading.value = false
+    }
+  }
+
+  return { users, total, loading, error, fetchUsers, fetchUser, updateUser, toggleUserActive, createUser, bulkCreateUsers, fetchStudentsList }
 }

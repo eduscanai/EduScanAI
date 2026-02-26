@@ -132,22 +132,30 @@
         <Cartao>
           <h2 class="text-heading-2 mb-4">Visão Geral das Turmas</h2>
           <p class="text-body text-text-secondary mb-4">Acompanhe o desempenho geral de todas as turmas.</p>
-          <div class="space-y-3">
-            <div v-for="turma in turmasResumo" :key="turma.nome" class="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
+          <div v-if="turmasResumo.length === 0" class="py-6 text-center">
+            <p class="text-sm text-gray-500">Nenhuma turma cadastrada.</p>
+          </div>
+          <div v-else class="space-y-3">
+            <NuxtLink
+              v-for="turma in turmasResumo"
+              :key="turma.id"
+              :to="`/turmas/${turma.id}`"
+              class="flex items-center justify-between py-2 border-b border-gray-100 last:border-0 no-underline hover:bg-gray-50 rounded px-2 -mx-2 transition-colors"
+            >
               <span class="text-sm font-medium text-gray-900">{{ turma.nome }}</span>
-              <div class="flex items-center gap-3">
-                <BarraProgresso :valor="turma.desempenho" :maximo="100" variante="primario" :mostrar-porcentagem="true" class="w-24" />
-                <span class="text-xs text-gray-500">{{ turma.alunos }} alunos</span>
-              </div>
-            </div>
+              <span class="text-xs text-gray-500">{{ turma.alunos }} alunos</span>
+            </NuxtLink>
           </div>
         </Cartao>
 
         <Cartao>
           <h2 class="text-heading-2 mb-4">Atividades Recentes</h2>
           <p class="text-body text-text-secondary mb-4">Últimas atividades registradas na plataforma.</p>
-          <div class="space-y-3">
-            <div v-for="atividade in atividadesRecentes" :key="atividade.descricao" class="flex items-start gap-3 py-2 border-b border-gray-100 last:border-0">
+          <div v-if="atividadesRecentes.length === 0" class="py-6 text-center">
+            <p class="text-sm text-gray-500">Nenhuma atividade registrada.</p>
+          </div>
+          <div v-else class="space-y-3">
+            <div v-for="atividade in atividadesRecentes" :key="atividade.id" class="flex items-start gap-3 py-2 border-b border-gray-100 last:border-0">
               <span class="text-lg">{{ atividade.icone }}</span>
               <div>
                 <p class="text-sm font-medium text-gray-900">{{ atividade.descricao }}</p>
@@ -163,20 +171,20 @@
         <Cartao>
           <h2 class="text-heading-2 mb-4">Minhas Turmas</h2>
           <p class="text-body text-text-secondary mb-4">Turmas que você está lecionando atualmente.</p>
-          <div class="space-y-3">
+          <div v-if="minhasTurmas.length === 0" class="py-6 text-center">
+            <p class="text-sm text-gray-500">Nenhuma turma vinculada.</p>
+          </div>
+          <div v-else class="space-y-3">
             <NuxtLink
               v-for="turma in minhasTurmas"
-              :key="turma.nome"
-              :to="turma.to"
+              :key="turma.id"
+              :to="`/turmas/${turma.id}`"
               class="flex items-center justify-between py-3 px-3 rounded-lg hover:bg-gray-50 transition-colors no-underline"
             >
               <div>
                 <p class="text-sm font-semibold text-gray-900">{{ turma.nome }}</p>
                 <p class="text-xs text-gray-500">{{ turma.alunos }} alunos</p>
               </div>
-              <Etiqueta :variante="turma.saude >= 80 ? 'dominado' : turma.saude >= 60 ? 'em-progresso' : 'em-risco'">
-                {{ turma.saude }}%
-              </Etiqueta>
             </NuxtLink>
           </div>
         </Cartao>
@@ -184,13 +192,16 @@
         <Cartao>
           <h2 class="text-heading-2 mb-4">Pendentes de Correção</h2>
           <p class="text-body text-text-secondary mb-4">Provas e atividades aguardando revisão.</p>
-          <div class="space-y-3">
-            <div v-for="item in pendentesCorrecao" :key="item.titulo" class="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
+          <div v-if="pendentesCorrecao.length === 0" class="py-6 text-center">
+            <p class="text-sm text-gray-500">Nenhuma correção pendente.</p>
+          </div>
+          <div v-else class="space-y-3">
+            <div v-for="item in pendentesCorrecao" :key="item.id" class="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
               <div>
                 <p class="text-sm font-medium text-gray-900">{{ item.titulo }}</p>
                 <p class="text-xs text-gray-500">{{ item.turma }}</p>
               </div>
-              <span class="text-xs font-semibold text-warning-600 bg-warning-50 px-2 py-1 rounded-full">{{ item.quantidade }} pendentes</span>
+              <span class="text-xs font-semibold text-warning-600 bg-warning-50 px-2 py-1 rounded-full">{{ item.aluno }}</span>
             </div>
           </div>
         </Cartao>
@@ -204,7 +215,12 @@
             <h2 class="text-heading-2 mb-4">Evolução de Desempenho</h2>
             <p class="text-body text-text-secondary mb-4">Acompanhe a evolução das suas notas ao longo do tempo.</p>
             <template v-if="filtroDisciplina">
-              <ClientOnly>
+              <div v-if="dadosPerformance.rotulos.length === 0" class="w-full h-64 flex flex-col items-center justify-center bg-gray-50 rounded-lg">
+                <span class="text-3xl mb-2">📈</span>
+                <p class="text-sm font-medium text-gray-500">Sem dados de notas</p>
+                <p class="text-xs text-gray-400 mt-1">para esta disciplina</p>
+              </div>
+              <ClientOnly v-else>
                 <GraficoPerformance :dados="dadosPerformance" />
                 <template #fallback>
                   <div class="w-full h-64 flex items-center justify-center bg-gray-50 rounded-lg">
@@ -250,7 +266,7 @@
           </Cartao>
         </div>
 
-        <!-- Áreas de Dificuldade -->
+        <!-- Áreas de Dificuldade (MOCK — sem tabela no banco ainda) -->
         <Cartao class="lg:col-span-2">
           <h2 class="text-heading-2 mb-4">Áreas de Dificuldade</h2>
           <p class="text-body text-text-secondary mb-4">Tópicos que precisam de mais atenção.</p>
@@ -297,11 +313,14 @@
         <Cartao>
           <h2 class="text-heading-2 mb-4">Atividades Pendentes</h2>
           <p class="text-body text-text-secondary mb-4">Atividades que você precisa completar.</p>
-          <div class="space-y-3">
-            <div v-for="item in atividadesPendentes" :key="item.titulo" class="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
+          <div v-if="atividadesPendentes.length === 0" class="py-6 text-center">
+            <p class="text-sm text-gray-500">Nenhuma atividade pendente.</p>
+          </div>
+          <div v-else class="space-y-3">
+            <div v-for="item in atividadesPendentes" :key="item.id" class="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
               <div>
                 <p class="text-sm font-medium text-gray-900">{{ item.titulo }}</p>
-                <p class="text-xs text-gray-500">{{ item.disciplina }} · Entrega: {{ item.prazo }}</p>
+                <p class="text-xs text-gray-500">{{ item.disciplina }}{{ item.prazo ? ` · Entrega: ${item.prazo}` : '' }}</p>
               </div>
               <Etiqueta variante="em-progresso">Pendente</Etiqueta>
             </div>
@@ -311,8 +330,11 @@
         <Cartao>
           <h2 class="text-heading-2 mb-4">Notas Recentes</h2>
           <p class="text-body text-text-secondary mb-4">Suas últimas avaliações corrigidas.</p>
-          <div class="space-y-3">
-            <div v-for="nota in notasRecentes" :key="nota.avaliacao" class="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
+          <div v-if="notasRecentes.length === 0" class="py-6 text-center">
+            <p class="text-sm text-gray-500">Nenhuma nota disponível.</p>
+          </div>
+          <div v-else class="space-y-3">
+            <div v-for="nota in notasRecentes" :key="nota.id" class="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
               <div>
                 <p class="text-sm font-medium text-gray-900">{{ nota.avaliacao }}</p>
                 <p class="text-xs text-gray-500">{{ nota.disciplina }}</p>
@@ -329,7 +351,6 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
 import Cartao from '~/components/layout/Cartao/Cartao.vue'
 import CartaoEstatistica from '~/components/data/CartaoEstatistica/CartaoEstatistica.vue'
 import BarraProgresso from '~/components/data/BarraProgresso/BarraProgresso.vue'
@@ -343,12 +364,47 @@ definePageMeta({
 
 const supabase = useSupabaseClient()
 const { usuario } = useUsuario()
+const user = useSupabaseUser()
 const { isAdmin, isPedagogue, isTeacher, isStudent } = usePermissions()
 const { school, counts, fetchSchool, fetchCounts } = useSchool()
+const { classes, fetchClasses } = useClasses()
+const { countAssignments, fetchRecentAssignments, fetchPendingForStudent } = useAssignments()
+const { fetchGradedForStudent, fetchUngradedForTeacher, countUngradedForTeacher, fetchStudentScoresOverTime } = useSubmissions()
+const { subjects, fetchSubjects } = useSubjects()
 
 const loadingSchool = ref(true)
 const anoLetivo = ref<string | null>(null)
 
+// --- Shared data ---
+const totalAssignments = ref(0)
+const totalUngraded = ref(0)
+
+// --- Admin/Pedagogue data ---
+const turmasResumo = ref<{ id: string; nome: string; alunos: number }[]>([])
+const atividadesRecentes = ref<{ id: string; icone: string; descricao: string; tempo: string }[]>([])
+
+// --- Teacher data ---
+const minhasTurmas = ref<{ id: string; nome: string; alunos: number }[]>([])
+const pendentesCorrecao = ref<{ id: string; titulo: string; turma: string; aluno: string }[]>([])
+
+// --- Student data ---
+const filtroDisciplina = ref('')
+const filtroPeriodo = ref('')
+const rawPendentes = ref<any[]>([])
+const rawNotas = ref<any[]>([])
+const dadosPerformance = ref<{ rotulos: string[]; valores: number[] }>({ rotulos: [], valores: [] })
+
+const opcoesPeriodo = [
+  { rotulo: '1º Trimestre', valor: '1tri' },
+  { rotulo: '2º Trimestre', valor: '2tri' },
+  { rotulo: '3º Trimestre', valor: '3tri' }
+]
+
+const opcoesDisciplina = computed(() =>
+  subjects.value.map(s => ({ rotulo: s.name, valor: s.id }))
+)
+
+// --- Fetch academic year ---
 const fetchAnoLetivo = async () => {
   if (!usuario.value.schoolId) return
   const { data } = await supabase
@@ -360,103 +416,116 @@ const fetchAnoLetivo = async () => {
   anoLetivo.value = (data as any)?.name || null
 }
 
-onMounted(async () => {
-  if (isAdmin.value || isPedagogue.value) {
-    await Promise.all([fetchSchool(), fetchCounts(), fetchAnoLetivo()])
-    loadingSchool.value = false
+// --- Fetch class student counts ---
+const fetchTurmasComAlunos = async () => {
+  const result: { id: string; nome: string; alunos: number }[] = []
+  for (const c of classes.value) {
+    const { count } = await supabase
+      .from('class_students')
+      .select('student_id', { count: 'exact', head: true })
+      .eq('class_id', c.id)
+    result.push({ id: c.id, nome: c.name, alunos: count || 0 })
   }
-  if (isStudent.value) {
-    await fetchSubjects()
-  }
+  return result
+}
+
+// --- Format time ago ---
+const tempoAtras = (dateStr: string) => {
+  const now = new Date()
+  const date = new Date(dateStr)
+  const diffMs = now.getTime() - date.getTime()
+  const diffMin = Math.floor(diffMs / 60000)
+  if (diffMin < 60) return `Há ${diffMin} min`
+  const diffHrs = Math.floor(diffMin / 60)
+  if (diffHrs < 24) return `Há ${diffHrs}h`
+  const diffDays = Math.floor(diffHrs / 24)
+  if (diffDays === 1) return 'Ontem'
+  return `Há ${diffDays} dias`
+}
+
+// --- Format date ---
+const formatarData = (dateStr: string | null) => {
+  if (!dateStr) return ''
+  const d = new Date(dateStr)
+  return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`
+}
+
+// --- INIT: Admin/Pedagogue ---
+const initAdmin = async () => {
+  await Promise.all([fetchSchool(), fetchCounts(), fetchAnoLetivo(), fetchClasses()])
+  loadingSchool.value = false
+
+  turmasResumo.value = await fetchTurmasComAlunos()
+  totalAssignments.value = await countAssignments()
+
+  const recent = await fetchRecentAssignments(5)
+  atividadesRecentes.value = recent.map(a => ({
+    id: a.id,
+    icone: a.status === 'published' ? '📝' : a.status === 'closed' ? '✅' : '📋',
+    descricao: `${a.title} — ${(a.classes as any)?.name || 'Sem turma'}`,
+    tempo: tempoAtras(a.created_at)
+  }))
+}
+
+// --- INIT: Teacher ---
+const initTeacher = async () => {
+  await fetchClasses()
+
+  minhasTurmas.value = await fetchTurmasComAlunos()
+  totalAssignments.value = await countAssignments()
+  totalUngraded.value = await countUngradedForTeacher()
+
+  const ungraded = await fetchUngradedForTeacher(10)
+  pendentesCorrecao.value = ungraded.map((s: any) => ({
+    id: s.id,
+    titulo: s.assignments?.title || 'Sem título',
+    turma: s.assignments?.classes?.name || '',
+    aluno: s.profiles?.full_name || 'Aluno'
+  }))
+}
+
+// --- INIT: Student ---
+const initStudent = async () => {
+  await fetchSubjects()
+
+  const pending = await fetchPendingForStudent()
+  rawPendentes.value = pending
+
+  const graded = await fetchGradedForStudent(undefined, 20)
+  rawNotas.value = graded
+}
+
+// --- Student computed data ---
+const atividadesPendentes = computed(() => {
+  return rawPendentes.value
+    .filter(a => {
+      const matchDisciplina = !filtroDisciplina.value || a.subject_id === filtroDisciplina.value
+      return matchDisciplina
+    })
+    .map(a => ({
+      id: a.id,
+      titulo: a.title,
+      disciplina: a.subjects?.name || 'Sem disciplina',
+      prazo: formatarData(a.due_date)
+    }))
 })
 
-// Stats diferenciados por role
-const statsAdmin = [
-  { rotulo: 'Total de Usuários', valor: 186, mudanca: 12, icone: '👥', fundoIcone: 'bg-primary-50' },
-  { rotulo: 'Turmas Ativas', valor: 12, mudanca: 2, icone: '📚', fundoIcone: 'bg-purple-50' },
-  { rotulo: 'Taxa de Conclusão', valor: 87, mudanca: -3, formato: 'porcentagem' as const, icone: '✅', fundoIcone: 'bg-green-50' },
-  { rotulo: 'Média Geral', valor: 82, mudanca: 5.4, formato: 'porcentagem' as const, icone: '📊', fundoIcone: 'bg-blue-50' }
-]
-
-const statsTeacher = [
-  { rotulo: 'Meus Alunos', valor: 72, mudanca: 4, icone: '👥', fundoIcone: 'bg-primary-50' },
-  { rotulo: 'Minhas Turmas', valor: 3, mudanca: 0, icone: '📚', fundoIcone: 'bg-purple-50' },
-  { rotulo: 'Pendentes de Correção', valor: 8, mudanca: -2, icone: '📝', fundoIcone: 'bg-warning-50' },
-  { rotulo: 'Média das Turmas', valor: 78, mudanca: 3.1, formato: 'porcentagem' as const, icone: '📊', fundoIcone: 'bg-blue-50' }
-]
-
-// Filtros do aluno
-const filtroDisciplina = ref('')
-const filtroPeriodo = ref('')
-
-const opcoesPeriodo = [
-  { rotulo: '1º Trimestre', valor: '1tri' },
-  { rotulo: '2º Trimestre', valor: '2tri' },
-  { rotulo: '3º Trimestre', valor: '3tri' }
-]
-
-const { subjects, fetchSubjects } = useSubjects()
-
-const opcoesDisciplina = computed(() =>
-  subjects.value.map(s => ({ rotulo: s.name, valor: s.id }))
-)
-
-// Mock data — Admin/Pedagogue
-const turmasResumo = [
-  { nome: 'Matemática 9º A', desempenho: 82, alunos: 24 },
-  { nome: 'Física 1º EM', desempenho: 65, alunos: 30 },
-  { nome: 'História 8º B', desempenho: 92, alunos: 28 }
-]
-
-const atividadesRecentes = [
-  { icone: '📝', descricao: 'Prova de Matemática corrigida — 9º A', tempo: 'Há 2 horas' },
-  { icone: '👤', descricao: 'Novo aluno matriculado — Pedro Lima', tempo: 'Há 4 horas' },
-  { icone: '📊', descricao: 'Relatório mensal gerado — Fevereiro', tempo: 'Ontem' }
-]
-
-// Mock data — Teacher
-const minhasTurmas = [
-  { nome: 'Matemática 9º A', alunos: 24, saude: 82, to: '/turmas/mat-9a' },
-  { nome: 'Matemática 8º B', alunos: 28, saude: 75, to: '/turmas/mat-8b' },
-  { nome: 'Matemática 1º EM', alunos: 30, saude: 58, to: '/turmas/mat-1em' }
-]
-
-const pendentesCorrecao = [
-  { titulo: 'Prova Bimestral', turma: 'Matemática 9º A', quantidade: 3 },
-  { titulo: 'Lista de Exercícios', turma: 'Matemática 8º B', quantidade: 5 }
-]
-
-// Mock data — Student (com disciplinaId e periodo para filtros)
-const todasAtividadesPendentes = [
-  { titulo: 'Lista de Exercícios 4', disciplina: 'Matemática', disciplinaId: 'mat', periodo: '1tri', prazo: '25/02' },
-  { titulo: 'Trabalho sobre Revolução Francesa', disciplina: 'História', disciplinaId: 'his', periodo: '1tri', prazo: '28/02' },
-  { titulo: 'Redação Argumentativa', disciplina: 'Língua Portuguesa', disciplinaId: 'por', periodo: '2tri', prazo: '05/03' },
-  { titulo: 'Exercícios de Cinemática', disciplina: 'Física', disciplinaId: 'fis', periodo: '1tri', prazo: '01/03' }
-]
-
-const todasNotasRecentes = [
-  { avaliacao: 'Prova Bimestral', disciplina: 'Matemática', disciplinaId: 'mat', periodo: '1tri', valor: 8.5 },
-  { avaliacao: 'Trabalho em Grupo', disciplina: 'Física', disciplinaId: 'fis', periodo: '1tri', valor: 9.0 },
-  { avaliacao: 'Prova Mensal', disciplina: 'História', disciplinaId: 'his', periodo: '2tri', valor: 6.5 },
-  { avaliacao: 'Simulado', disciplina: 'Matemática', disciplinaId: 'mat', periodo: '2tri', valor: 7.0 },
-  { avaliacao: 'Trabalho Individual', disciplina: 'Língua Portuguesa', disciplinaId: 'por', periodo: '1tri', valor: 8.0 }
-]
-
-const atividadesPendentes = computed(() =>
-  todasAtividadesPendentes.filter(a => {
-    const matchDisciplina = !filtroDisciplina.value || a.disciplinaId === filtroDisciplina.value
-    const matchPeriodo = !filtroPeriodo.value || a.periodo === filtroPeriodo.value
-    return matchDisciplina && matchPeriodo
-  })
-)
-
-const notasRecentes = computed(() =>
-  todasNotasRecentes.filter(n => {
-    const matchDisciplina = !filtroDisciplina.value || n.disciplinaId === filtroDisciplina.value
-    const matchPeriodo = !filtroPeriodo.value || n.periodo === filtroPeriodo.value
-    return matchDisciplina && matchPeriodo
-  })
-)
+const notasRecentes = computed(() => {
+  return rawNotas.value
+    .filter(s => {
+      const matchDisciplina = !filtroDisciplina.value || s.assignments?.subject_id === filtroDisciplina.value
+      return matchDisciplina
+    })
+    .map(s => {
+      const maxScore = s.assignments?.max_score || 10
+      return {
+        id: s.id,
+        avaliacao: s.assignments?.title || 'Avaliação',
+        disciplina: s.assignments?.subjects?.name || 'Sem disciplina',
+        valor: (s.score / maxScore) * 10
+      }
+    })
+})
 
 const mediaCalculada = computed(() => {
   const notas = notasRecentes.value
@@ -464,32 +533,6 @@ const mediaCalculada = computed(() => {
   return Math.round(notas.reduce((acc: number, n) => acc + n.valor, 0) / notas.length * 10)
 })
 
-const statsStudent = computed(() => [
-  { rotulo: 'Atividades Pendentes', valor: atividadesPendentes.value.length, mudanca: -1, icone: '📝', fundoIcone: 'bg-warning-50' },
-  { rotulo: 'Nota Média', valor: mediaCalculada.value, mudanca: 2.3, formato: 'porcentagem' as const, icone: '📊', fundoIcone: 'bg-blue-50' },
-  { rotulo: 'Avaliações Concluídas', valor: notasRecentes.value.length, mudanca: 3, icone: '✅', fundoIcone: 'bg-green-50' },
-  { rotulo: 'Posição na Turma', valor: 5, mudanca: 2, icone: '🏆', fundoIcone: 'bg-purple-50' }
-])
-
-const statsVisiveis = computed(() => {
-  if (isAdmin.value || isPedagogue.value) return statsAdmin
-  if (isTeacher.value) return statsTeacher
-  return statsStudent.value
-})
-
-// Performance chart data por período
-const dadosPerformancePorPeriodo: Record<string, { rotulos: string[]; valores: number[] }> = {
-  '': { rotulos: ['MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', 'OUT'], valores: [6.5, 7.0, 6.8, 7.5, 7.2, 8.0, 7.8, 8.5] },
-  '1tri': { rotulos: ['MAR', 'ABR'], valores: [6.5, 7.0] },
-  '2tri': { rotulos: ['MAI', 'JUN', 'JUL'], valores: [6.8, 7.5, 7.2] },
-  '3tri': { rotulos: ['AGO', 'SET', 'OUT'], valores: [8.0, 7.8, 8.5] }
-}
-
-const dadosPerformance = computed(() =>
-  dadosPerformancePorPeriodo[filtroPeriodo.value] || dadosPerformancePorPeriodo['']
-)
-
-// Resumo lateral
 const melhorNota = computed(() => {
   const notas = notasRecentes.value
   if (notas.length === 0) return '-'
@@ -508,20 +551,82 @@ const mediaFormatada = computed(() => {
   return (notas.reduce((acc, n) => acc + n.valor, 0) / notas.length).toFixed(1)
 })
 
-// Dificuldades por disciplina
+// --- Fetch performance chart when discipline changes ---
+watch(filtroDisciplina, async (newVal) => {
+  if (newVal && user.value) {
+    const data = await fetchStudentScoresOverTime(user.value.id, newVal)
+    dadosPerformance.value = data
+  } else {
+    dadosPerformance.value = { rotulos: [], valores: [] }
+  }
+})
+
+// --- Stats ---
+interface StatItem {
+  rotulo: string
+  valor: number | string
+  mudanca?: number
+  formato?: 'porcentagem'
+  icone: string
+  fundoIcone: string
+}
+
+const statsAdmin = computed((): StatItem[] => [
+  { rotulo: 'Total de Alunos', valor: counts.value.alunos, icone: '👥', fundoIcone: 'bg-primary-50' },
+  { rotulo: 'Turmas Ativas', valor: counts.value.turmas, icone: '📚', fundoIcone: 'bg-purple-50' },
+  { rotulo: 'Professores', valor: counts.value.professores, icone: '👨‍🏫', fundoIcone: 'bg-green-50' },
+  { rotulo: 'Avaliações', valor: totalAssignments.value, icone: '📝', fundoIcone: 'bg-blue-50' }
+])
+
+const totalStudentsTeacher = computed(() =>
+  minhasTurmas.value.reduce((acc, t) => acc + t.alunos, 0)
+)
+
+const statsTeacher = computed((): StatItem[] => [
+  { rotulo: 'Meus Alunos', valor: totalStudentsTeacher.value, icone: '👥', fundoIcone: 'bg-primary-50' },
+  { rotulo: 'Minhas Turmas', valor: minhasTurmas.value.length, icone: '📚', fundoIcone: 'bg-purple-50' },
+  { rotulo: 'Pendentes de Correção', valor: totalUngraded.value, icone: '📝', fundoIcone: 'bg-warning-50' },
+  { rotulo: 'Avaliações', valor: totalAssignments.value, icone: '📊', fundoIcone: 'bg-blue-50' }
+])
+
+const statsStudent = computed((): StatItem[] => [
+  { rotulo: 'Atividades Pendentes', valor: rawPendentes.value.length, icone: '📝', fundoIcone: 'bg-warning-50' },
+  { rotulo: 'Nota Média', valor: mediaCalculada.value, formato: 'porcentagem' as const, icone: '📊', fundoIcone: 'bg-blue-50' },
+  { rotulo: 'Avaliações Concluídas', valor: rawNotas.value.length, icone: '✅', fundoIcone: 'bg-green-50' },
+  { rotulo: 'Disciplinas', valor: subjects.value.length, icone: '📚', fundoIcone: 'bg-purple-50' }
+])
+
+const statsVisiveis = computed(() => {
+  if (isAdmin.value || isPedagogue.value) return statsAdmin.value
+  if (isTeacher.value) return statsTeacher.value
+  return statsStudent.value
+})
+
+// Dificuldades por disciplina (MOCK — sem tabela no banco ainda)
 const todasDificuldades = [
-  { nome: 'Equações de 1º Grau', disciplinaId: 'mat', disciplina: 'Matemática', pontuacao: 35, nivel: 'critico' },
-  { nome: 'Funções', disciplinaId: 'mat', disciplina: 'Matemática', pontuacao: 42, nivel: 'critico' },
-  { nome: 'Regra de Três', disciplinaId: 'mat', disciplina: 'Matemática', pontuacao: 58, nivel: 'desenvolvimento' },
-  { nome: 'Interpretação de Texto', disciplinaId: 'por', disciplina: 'Língua Portuguesa', pontuacao: 45, nivel: 'critico' },
-  { nome: 'Concordância Verbal', disciplinaId: 'por', disciplina: 'Língua Portuguesa', pontuacao: 62, nivel: 'desenvolvimento' },
-  { nome: 'Revolução Francesa', disciplinaId: 'his', disciplina: 'História', pontuacao: 50, nivel: 'desenvolvimento' },
-  { nome: 'Cinemática', disciplinaId: 'fis', disciplina: 'Física', pontuacao: 38, nivel: 'critico' }
+  { nome: 'Equações de 1º Grau', disciplinaId: '', disciplina: 'Matemática', pontuacao: 35, nivel: 'critico' },
+  { nome: 'Funções', disciplinaId: '', disciplina: 'Matemática', pontuacao: 42, nivel: 'critico' },
+  { nome: 'Regra de Três', disciplinaId: '', disciplina: 'Matemática', pontuacao: 58, nivel: 'desenvolvimento' },
+  { nome: 'Interpretação de Texto', disciplinaId: '', disciplina: 'Língua Portuguesa', pontuacao: 45, nivel: 'critico' },
+  { nome: 'Concordância Verbal', disciplinaId: '', disciplina: 'Língua Portuguesa', pontuacao: 62, nivel: 'desenvolvimento' },
+  { nome: 'Revolução Francesa', disciplinaId: '', disciplina: 'História', pontuacao: 50, nivel: 'desenvolvimento' },
+  { nome: 'Cinemática', disciplinaId: '', disciplina: 'Física', pontuacao: 38, nivel: 'critico' }
 ]
 
 const dificuldadesFiltradas = computed(() =>
-  todasDificuldades
-    .filter(d => !filtroDisciplina.value || d.disciplinaId === filtroDisciplina.value)
-    .sort((a, b) => a.pontuacao - b.pontuacao)
+  todasDificuldades.sort((a, b) => a.pontuacao - b.pontuacao)
 )
+
+// --- onMounted ---
+onMounted(async () => {
+  if (isAdmin.value || isPedagogue.value) {
+    await initAdmin()
+  }
+  if (isTeacher.value) {
+    await initTeacher()
+  }
+  if (isStudent.value) {
+    await initStudent()
+  }
+})
 </script>
