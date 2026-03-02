@@ -117,7 +117,7 @@
               <p class="text-xs font-medium text-gray-500 uppercase">Prazo</p>
               <p :class="['text-sm mt-0.5', prazoVencido ? 'text-critical-500 font-medium' : 'text-gray-900']">
                 {{ atividade.due_date ? formatarDataHora(atividade.due_date) : 'Sem prazo' }}
-                {{ prazoVencido ? '(Vencido)' : '' }}
+                {{ prazoVencido ? '(Atrasado)' : '' }}
               </p>
             </div>
             <div>
@@ -177,7 +177,7 @@ const prazoVencido = computed(() =>
 const statusTexto = computed(() => {
   if (minhaSubmissao.value?.graded_at) return 'Corrigida'
   if (minhaSubmissao.value) return 'Entregue'
-  if (prazoVencido.value) return 'Vencida'
+  if (prazoVencido.value) return 'Atrasada'
   return 'Pendente'
 })
 

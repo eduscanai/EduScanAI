@@ -93,7 +93,7 @@ const classePrioridade = (p: string) => ({
 
 const rotuloDestino = (aviso: any) => {
   if (aviso.target_type === 'school') return 'Toda a escola'
-  if (aviso.target_type === 'class' && aviso.classes?.name) return aviso.classes.name
+  if (aviso.target_type === 'class') return 'Turma'
   if (aviso.target_type === 'role' && aviso.target_role) {
     const mapa: Record<string, string> = { student: 'Alunos', teacher: 'Professores', admin: 'Administradores', pedagogue: 'Pedagogos' }
     return mapa[aviso.target_role] || aviso.target_role

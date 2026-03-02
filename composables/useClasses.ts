@@ -33,7 +33,6 @@ interface FetchClassesParams {
 export const useClasses = () => {
   const supabase = useSupabaseClient()
   const { usuario } = useUsuario()
-  const user = useSupabaseUser()
   const { isAdmin, isPedagogue, isTeacher, isStudent } = usePermissions()
 
   const classes = ref<ClassData[]>([])
@@ -47,11 +46,11 @@ export const useClasses = () => {
 
     try {
       if (isTeacher.value) {
-        if (!user.value?.id) { classes.value = []; return }
+        if (!usuario.value.id) { classes.value = []; return }
         const { data: linked } = await supabase
           .from('class_teachers')
           .select('class_id')
-          .eq('teacher_id', user.value.id)
+          .eq('teacher_id', usuario.value.id)
         const classIds = linked?.map((c: any) => c.class_id) || []
         if (classIds.length === 0) {
           classes.value = []
@@ -68,20 +67,11 @@ export const useClasses = () => {
         if (err) throw err
         classes.value = (data || []) as ClassData[]
       } else if (isStudent.value) {
-        if (!user.value?.id) { classes.value = []; return }
-        const { data: linked } = await supabase
-          .from('class_students')
-          .select('class_id')
-          .eq('student_id', user.value.id)
-        const classIds = linked?.map((c: any) => c.class_id) || []
-        if (classIds.length === 0) {
-          classes.value = []
-          return
-        }
+        // Query direta — a RLS (classes_select_student) já filtra por turmas matriculadas
         let query = supabase
           .from('classes')
           .select('*, academic_years(name), profiles!teacher_id(id, full_name)')
-          .in('id', classIds)
+          .eq('school_id', usuario.value.schoolId)
         if (params.academicYearId) query = query.eq('academic_year_id', params.academicYearId)
         if (params.search) query = query.ilike('name', `%${params.search}%`)
         query = query.order('name')

@@ -171,8 +171,9 @@ const salvarRascunho = async () => {
     })
     mostrarNotificacao('sucesso', 'Rascunho salvo!')
     setTimeout(() => navigateTo(`/announcements/${result?.id}`), 1000)
-  } catch {
-    mostrarNotificacao('critico', 'Erro ao salvar rascunho')
+  } catch (e: any) {
+    console.error('Erro ao salvar rascunho:', e)
+    mostrarNotificacao('critico', e.message || 'Erro ao salvar rascunho')
   }
 }
 
@@ -188,10 +189,11 @@ const publicar = async () => {
       priority: form.value.priority as 'low' | 'normal' | 'high',
       publish: true
     })
-    mostrarNotificacao('sucesso', 'Aviso publicado! Destinatários foram notificados.')
+    mostrarNotificacao('sucesso', 'Aviso publicado!')
     setTimeout(() => navigateTo('/announcements'), 1500)
-  } catch {
-    mostrarNotificacao('critico', 'Erro ao publicar aviso')
+  } catch (e: any) {
+    console.error('Erro ao publicar aviso:', e)
+    mostrarNotificacao('critico', e.message || 'Erro ao publicar aviso')
   }
 }
 

@@ -6,8 +6,11 @@
           <th
             v-for="coluna in colunas"
             :key="coluna.chave"
-            class="px-6 py-3 text-left text-xs font-semibold text-text-primary uppercase tracking-wider"
-            :class="coluna.alinhamento === 'direita' ? 'text-right' : ''"
+            class="text-left text-xs font-semibold text-text-primary uppercase tracking-wider"
+            :class="[
+              coluna.alinhamento === 'direita' ? 'text-right' : '',
+              compacto ? 'px-6 py-2' : 'px-6 py-3'
+            ]"
           >
             {{ coluna.rotulo }}
           </th>
@@ -22,8 +25,11 @@
           <td
             v-for="coluna in colunas"
             :key="coluna.chave"
-            class="px-6 py-4 whitespace-nowrap text-body text-text-primary"
-            :class="coluna.alinhamento === 'direita' ? 'text-right' : ''"
+            class="whitespace-nowrap text-text-primary"
+            :class="[
+              coluna.alinhamento === 'direita' ? 'text-right' : '',
+              compacto ? 'px-6 py-2.5 text-xs' : 'px-6 py-4 text-body'
+            ]"
           >
             <slot :name="`celula-${coluna.chave}`" :linha="linha" :valor="linha[coluna.chave]">
               {{ linha[coluna.chave] }}
@@ -52,7 +58,10 @@ export interface ColunaTabelaDados {
 export interface PropriedadesTabelaDados {
   colunas: ColunaTabelaDados[]
   dados: Record<string, any>[]
+  compacto?: boolean
 }
 
-defineProps<PropriedadesTabelaDados>()
+withDefaults(defineProps<PropriedadesTabelaDados>(), {
+  compacto: false
+})
 </script>

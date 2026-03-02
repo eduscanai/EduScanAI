@@ -1,96 +1,101 @@
 <template>
-  <div class="bg-white rounded-2xl border border-gray-200 p-6 hover:shadow-md transition-shadow duration-200 flex flex-col justify-between">
-    <!-- HEADER -->
-    <div>
-      <div class="flex justify-between items-start mb-4">
-        <!-- Esquerda: Ícone + Texto -->
-        <div class="flex items-start gap-3">
-          <!-- Ícone da disciplina -->
-          <div
-            class="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
-            :style="{ backgroundColor: iconBg }"
-          >
-            <Icone :tamanho="24" class="text-white">
-              <component :is="iconeComponent" />
-            </Icone>
-          </div>
-
-          <!-- Texto -->
-          <div>
-            <h3 class="text-xl font-bold text-gray-900">{{ subject }}</h3>
-            <p class="text-sm text-gray-500">{{ grade }}</p>
-          </div>
+  <NuxtLink
+    :to="to"
+    class="group block no-underline bg-white rounded-2xl border border-gray-200 p-5 hover:shadow-md hover:border-primary-200 transition-all duration-200"
+  >
+    <!-- HEADER: Ícone + Texto + Badge alunos -->
+    <div class="flex justify-between items-start mb-3">
+      <div class="flex items-start gap-3 min-w-0">
+        <!-- Ícone da disciplina -->
+        <div
+          class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+          :style="{ backgroundColor: iconBg }"
+        >
+          <Icone :tamanho="20" class="text-white">
+            <component :is="iconeComponent" />
+          </Icone>
         </div>
 
-        <!-- Direita: Badge de alunos -->
-        <div class="flex items-center gap-1 text-sm text-gray-500">
-          <Icone :tamanho="14">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
-          </Icone>
-          <span>{{ studentCount }}</span>
+        <div class="min-w-0">
+          <h3 class="text-base font-bold text-gray-900 truncate group-hover:text-primary-500 transition-colors">{{ subject }}</h3>
+          <p v-if="grade" class="text-xs text-gray-500 mt-0.5">{{ grade }}</p>
         </div>
       </div>
 
-      <!-- SAÚDE DA TURMA -->
-      <div class="mb-4">
-        <div class="flex items-center justify-between mb-2">
-          <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Saúde da Turma</span>
-          <span class="text-sm font-bold" :class="corTextoSaude">{{ healthScore }}%</span>
-        </div>
-        <BarraProgresso
-          :valor="healthScore"
-          :maximo="100"
-          :altura="8"
-          :variante="varianteSaude"
-          :mostrar-porcentagem="false"
-        />
+      <!-- Badge de alunos -->
+      <div class="flex items-center gap-1 text-xs text-gray-500 shrink-0 ml-2 bg-gray-50 px-2 py-1 rounded-full">
+        <Icone :tamanho="12">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
+        </Icone>
+        <span>{{ studentCount }} alunos</span>
       </div>
-
-      <!-- RESUMO IA -->
-      <p class="text-sm text-gray-500">{{ aiSummary }}</p>
     </div>
 
-    <!-- BOTÃO -->
-    <div class="mt-4">
-      <Botao
-        variante="primario"
-        :largura-completa="true"
-        icone="→"
-        posicao-icone="direita"
-        @click="navegarParaTurma"
-      >
-        <template #default>Entrar na Turma</template>
-        <template #icone-direita>
-          <Icone :tamanho="16">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
-          </Icone>
-        </template>
-      </Botao>
+    <!-- INFO: Turno + Ano Letivo -->
+    <div v-if="shift || academicYear" class="flex flex-wrap gap-2 mb-3">
+      <span v-if="shift" class="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
+        {{ shift }}
+      </span>
+      <span v-if="academicYear" class="text-xs font-medium text-primary-600 bg-primary-50 px-2 py-0.5 rounded-full">
+        {{ academicYear }}
+      </span>
     </div>
-  </div>
+
+    <!-- SAÚDE DA TURMA (somente se > 0) -->
+    <div v-if="healthScore > 0" class="mb-3">
+      <div class="flex items-center justify-between mb-1.5">
+        <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Saúde da Turma</span>
+        <span class="text-xs font-bold" :class="corTextoSaude">{{ healthScore }}%</span>
+      </div>
+      <BarraProgresso
+        :valor="healthScore"
+        :maximo="100"
+        :altura="6"
+        :variante="varianteSaude"
+        :mostrar-porcentagem="false"
+      />
+    </div>
+
+    <!-- RESUMO (somente se informado e não é vazio placeholder) -->
+    <p v-if="aiSummary && healthScore > 0" class="text-xs text-gray-500 line-clamp-2">{{ aiSummary }}</p>
+
+    <!-- Seta sutil -->
+    <div class="flex justify-end mt-3">
+      <span class="text-xs font-medium text-gray-400 group-hover:text-primary-500 transition-colors flex items-center gap-1">
+        Ver turma
+        <Icone :tamanho="12">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+        </Icone>
+      </span>
+    </div>
+  </NuxtLink>
 </template>
 
 <script setup lang="ts">
 import { computed, h } from 'vue'
-import { useRouter } from 'vue-router'
 import Icone from '~/components/ui/Icone/Icone.vue'
-import Botao from '~/components/ui/Botao/Botao.vue'
 import BarraProgresso from '~/components/data/BarraProgresso/BarraProgresso.vue'
 
 export interface PropriedadesCartaoTurma {
   subject: string
-  grade: string
+  grade?: string
   studentCount: number
-  healthScore: number
-  aiSummary: string
+  healthScore?: number
+  aiSummary?: string
+  shift?: string
+  academicYear?: string
   icon: string
   iconBg: string
   to: string
 }
 
-const props = defineProps<PropriedadesCartaoTurma>()
-
-const router = useRouter()
+const props = withDefaults(defineProps<PropriedadesCartaoTurma>(), {
+  grade: '',
+  healthScore: 0,
+  aiSummary: '',
+  shift: '',
+  academicYear: ''
+})
 
 // Componentes de ícones
 const iconeComponent = computed(() => {
@@ -137,8 +142,4 @@ const corTextoSaude = computed(() => {
   if (props.healthScore >= 50) return 'text-yellow-600'
   return 'text-red-600'
 })
-
-const navegarParaTurma = () => {
-  router.push(props.to)
-}
 </script>

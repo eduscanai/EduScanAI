@@ -190,7 +190,7 @@ const itensNavegacao = computed<ItemNav[]>(() => [
     label: 'Calendário',
     to: '/calendario',
     icone: 'M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5',
-    visivel: !isStudent.value
+    visivel: true
   },
   {
     label: 'Ger. Turmas',
@@ -202,6 +202,12 @@ const itensNavegacao = computed<ItemNav[]>(() => [
     label: 'Disciplinas',
     to: '/admin/subjects',
     icone: 'M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25',
+    visivel: isAdmin.value
+  },
+  {
+    label: 'Grade Curricular',
+    to: '/admin/curricula',
+    icone: 'M3.75 12h16.5m-16.5 3.75h16.5M3.75 19.5h16.5M5.625 4.5h12.75a1.875 1.875 0 010 3.75H5.625a1.875 1.875 0 010-3.75z',
     visivel: isAdmin.value
   },
   {

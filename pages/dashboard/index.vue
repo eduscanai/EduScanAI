@@ -2,20 +2,29 @@
   <div>
     <h1 class="text-heading-1 mb-8">Dashboard</h1>
 
-    <!-- Filtros do Aluno -->
-    <div v-if="isStudent" class="flex gap-4 mb-6">
-      <CampoSelecao
-        :modelValue="filtroDisciplina"
-        @update:modelValue="filtroDisciplina = $event as string"
-        texto-reservado="Todas as Disciplinas"
-        :opcoes="opcoesDisciplina"
-      />
-      <CampoSelecao
-        :modelValue="filtroPeriodo"
-        @update:modelValue="filtroPeriodo = $event as string"
-        texto-reservado="Ano Todo"
-        :opcoes="opcoesPeriodo"
-      />
+    <!-- Info turma + filtros do aluno -->
+    <div v-if="isStudent" class="flex items-center justify-between mb-6">
+      <div v-if="turmasAluno.length > 0" class="flex items-center gap-2 text-sm text-gray-500">
+        <span class="font-medium text-gray-700">{{ turmasAluno[0].nome }}</span>
+        <span v-if="turmasAluno[0].serie" class="text-gray-400">&middot;</span>
+        <span v-if="turmasAluno[0].serie">{{ turmasAluno[0].serie }}</span>
+        <span v-if="turmasAluno[0].turno" class="text-gray-400">&middot;</span>
+        <span v-if="turmasAluno[0].turno">{{ turmasAluno[0].turno }}</span>
+      </div>
+      <div class="flex gap-3">
+        <CampoSelecao
+          :modelValue="filtroDisciplina"
+          @update:modelValue="filtroDisciplina = $event as string"
+          texto-reservado="Todas as Disciplinas"
+          :opcoes="opcoesDisciplina"
+        />
+        <CampoSelecao
+          :modelValue="filtroPeriodo"
+          @update:modelValue="filtroPeriodo = $event as string"
+          texto-reservado="Ano Todo"
+          :opcoes="opcoesPeriodo"
+        />
+      </div>
     </div>
 
     <!-- Stats -->
@@ -191,26 +200,63 @@
 
       <!-- Teacher -->
       <template v-if="isTeacher">
-        <Cartao>
-          <h2 class="text-heading-2 mb-4">Minhas Turmas</h2>
+        <div class="lg:col-span-2">
+          <h2 class="text-heading-2 mb-1">Minhas Turmas</h2>
           <p class="text-body text-text-secondary mb-4">Turmas que você está lecionando atualmente.</p>
           <div v-if="minhasTurmas.length === 0" class="py-6 text-center">
             <p class="text-sm text-gray-500">Nenhuma turma vinculada.</p>
           </div>
-          <div v-else class="space-y-3">
+          <div v-else class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
             <NuxtLink
               v-for="turma in minhasTurmas"
               :key="turma.id"
               :to="`/turmas/${turma.id}`"
-              class="flex items-center justify-between py-3 px-3 rounded-lg hover:bg-gray-50 transition-colors no-underline"
+              class="group block no-underline bg-white rounded-xl border border-gray-200 p-5 hover:shadow-md hover:border-primary-200 transition-all duration-200"
             >
-              <div>
-                <p class="text-sm font-semibold text-gray-900">{{ turma.nome }}</p>
-                <p class="text-xs text-gray-500">{{ turma.alunos }} alunos</p>
+              <!-- Header: Nome + turno badge -->
+              <div class="flex items-start justify-between mb-3">
+                <div class="min-w-0">
+                  <h3 class="text-base font-bold text-gray-900 truncate group-hover:text-primary-500 transition-colors">{{ turma.nome }}</h3>
+                  <p v-if="turma.serie" class="text-xs text-gray-500 mt-0.5">{{ turma.serie }}</p>
+                </div>
+                <span v-if="turma.turno" class="shrink-0 ml-2 text-xs font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
+                  {{ turma.turno }}
+                </span>
+              </div>
+
+              <!-- Info row -->
+              <div class="flex items-center gap-4 text-xs text-gray-500">
+                <div class="flex items-center gap-1">
+                  <Icone :tamanho="14">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
+                  </Icone>
+                  <span>{{ turma.alunos }} alunos</span>
+                </div>
+              </div>
+
+              <!-- Disciplinas -->
+              <div v-if="turma.disciplinas.length > 0" class="flex flex-wrap gap-1.5 mt-3">
+                <span
+                  v-for="disc in turma.disciplinas"
+                  :key="disc"
+                  class="text-xs font-medium text-primary-600 bg-primary-50 px-2 py-0.5 rounded-full"
+                >
+                  {{ disc }}
+                </span>
+              </div>
+
+              <!-- Seta sutil -->
+              <div class="flex justify-end mt-3">
+                <span class="text-xs font-medium text-gray-400 group-hover:text-primary-500 transition-colors flex items-center gap-1">
+                  Ver turma
+                  <Icone :tamanho="12">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+                  </Icone>
+                </span>
               </div>
             </NuxtLink>
           </div>
-        </Cartao>
+        </div>
 
         <Cartao>
           <h2 class="text-heading-2 mb-4">Pendentes de Correção</h2>
@@ -343,9 +389,13 @@
             <div v-for="item in atividadesPendentes" :key="item.id" class="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
               <div>
                 <p class="text-sm font-medium text-gray-900">{{ item.titulo }}</p>
-                <p class="text-xs text-gray-500">{{ item.disciplina }}{{ item.prazo ? ` · Entrega: ${item.prazo}` : '' }}</p>
+                <p :class="['text-xs', item.atrasada ? 'text-critical-500' : 'text-gray-500']">
+                  {{ item.disciplina }}{{ item.prazo ? ` · ${item.atrasada ? 'Atrasada' : 'Entrega'}: ${item.prazo}` : '' }}
+                </p>
               </div>
-              <Etiqueta variante="em-progresso">Pendente</Etiqueta>
+              <Etiqueta :variante="item.atrasada ? 'em-risco' : 'em-progresso'">
+                {{ item.atrasada ? 'Atrasada' : 'Pendente' }}
+              </Etiqueta>
             </div>
           </div>
         </Cartao>
@@ -375,6 +425,7 @@
 
 <script setup lang="ts">
 import Cartao from '~/components/layout/Cartao/Cartao.vue'
+import Icone from '~/components/ui/Icone/Icone.vue'
 import CartaoEstatistica from '~/components/data/CartaoEstatistica/CartaoEstatistica.vue'
 import BarraProgresso from '~/components/data/BarraProgresso/BarraProgresso.vue'
 import Etiqueta from '~/components/ui/Etiqueta/Etiqueta.vue'
@@ -386,14 +437,13 @@ definePageMeta({
 })
 
 const supabase = useSupabaseClient()
-const { usuario } = useUsuario()
-const user = useSupabaseUser()
+const { usuario, ensureProfile } = useUsuario()
 const { isAdmin, isPedagogue, isTeacher, isStudent } = usePermissions()
 const { school, counts, fetchSchool, fetchCounts } = useSchool()
 const { classes, fetchClasses } = useClasses()
 const { countAssignments, fetchRecentAssignments, fetchPendingForStudent } = useAssignments()
 const { fetchGradedForStudent, fetchUngradedForTeacher, countUngradedForTeacher, fetchStudentScoresOverTime } = useSubmissions()
-const { subjects, fetchSubjects } = useSubjects()
+const { subjects } = useSubjects()
 
 const loadingSchool = ref(true)
 const anoLetivo = ref<string | null>(null)
@@ -414,10 +464,11 @@ const turmasPaginadas = computed(() => {
 })
 
 // --- Teacher data ---
-const minhasTurmas = ref<{ id: string; nome: string; alunos: number }[]>([])
+const minhasTurmas = ref<{ id: string; nome: string; alunos: number; serie: string; turno: string; disciplinas: string[] }[]>([])
 const pendentesCorrecao = ref<{ id: string; titulo: string; turma: string; aluno: string }[]>([])
 
 // --- Student data ---
+const turmasAluno = ref<{ id: string; nome: string; serie: string; turno: string; alunos: number }[]>([])
 const filtroDisciplina = ref('')
 const filtroPeriodo = ref('')
 const rawPendentes = ref<any[]>([])
@@ -510,7 +561,41 @@ const initAdmin = async () => {
 const initTeacher = async () => {
   await fetchClasses()
 
-  minhasTurmas.value = await fetchTurmasComAlunos()
+  const turmasBase = await fetchTurmasComAlunos()
+
+  // Fetch subjects per class for this teacher
+  const classIds = turmasBase.map(t => t.id)
+  let disciplinasPorTurma = new Map<string, string[]>()
+  if (classIds.length > 0 && usuario.value.id) {
+    const { data: ctData } = await supabase
+      .from('class_teachers')
+      .select('class_id, subjects(name)')
+      .eq('teacher_id', usuario.value.id)
+      .in('class_id', classIds)
+    ctData?.forEach((ct: any) => {
+      const nome = ct.subjects?.name
+      if (nome) {
+        const arr = disciplinasPorTurma.get(ct.class_id) || []
+        arr.push(nome)
+        disciplinasPorTurma.set(ct.class_id, arr)
+      }
+    })
+  }
+
+  const turnoLabel: Record<string, string> = { morning: 'Manhã', afternoon: 'Tarde', evening: 'Noite' }
+
+  minhasTurmas.value = turmasBase.map(t => {
+    const classData = classes.value.find(c => c.id === t.id)
+    return {
+      id: t.id,
+      nome: t.nome,
+      alunos: t.alunos,
+      serie: classData?.grade_level || '',
+      turno: turnoLabel[classData?.shift || ''] || '',
+      disciplinas: disciplinasPorTurma.get(t.id) || []
+    }
+  })
+
   totalAssignments.value = await countAssignments()
   totalUngraded.value = await countUngradedForTeacher()
 
@@ -525,12 +610,52 @@ const initTeacher = async () => {
 
 // --- INIT: Student ---
 const initStudent = async () => {
-  await fetchSubjects()
+  await fetchClasses()
 
-  const pending = await fetchPendingForStudent()
+  const turnoLabel: Record<string, string> = { morning: 'Manhã', afternoon: 'Tarde', evening: 'Noite' }
+  const classIds = classes.value.map(c => c.id)
+
+  // Buscar contagem de alunos por turma
+  let countMap = new Map<string, number>()
+  if (classIds.length > 0) {
+    const { data: allStudents } = await supabase
+      .from('class_students')
+      .select('class_id')
+      .in('class_id', classIds)
+    allStudents?.forEach((s: any) => {
+      countMap.set(s.class_id, (countMap.get(s.class_id) || 0) + 1)
+    })
+  }
+  turmasAluno.value = classes.value.map(c => ({
+    id: c.id,
+    nome: c.name,
+    serie: c.grade_level || '',
+    turno: turnoLabel[c.shift || ''] || '',
+    alunos: countMap.get(c.id) || 0
+  }))
+
+  // Buscar disciplinas vinculadas à turma do aluno (via class_teachers)
+  if (classIds.length > 0) {
+    const { data: ctData } = await supabase
+      .from('class_teachers')
+      .select('subject_id')
+      .in('class_id', classIds)
+    const subjectIds = [...new Set((ctData || []).map((ct: any) => ct.subject_id).filter(Boolean))]
+    if (subjectIds.length > 0) {
+      const { data: subData } = await supabase
+        .from('subjects')
+        .select('id, school_id, name, code')
+        .in('id', subjectIds)
+        .order('name')
+      subjects.value = (subData || []) as any[]
+    }
+  }
+
+  const [pending, graded] = await Promise.all([
+    fetchPendingForStudent(),
+    fetchGradedForStudent(undefined, 20)
+  ])
   rawPendentes.value = pending
-
-  const graded = await fetchGradedForStudent(undefined, 20)
   rawNotas.value = graded
 }
 
@@ -545,7 +670,8 @@ const atividadesPendentes = computed(() => {
       id: a.id,
       titulo: a.title,
       disciplina: a.subjects?.name || 'Sem disciplina',
-      prazo: formatarData(a.due_date)
+      prazo: formatarData(a.due_date),
+      atrasada: a.due_date ? new Date(a.due_date) < new Date() : false
     }))
 })
 
@@ -592,8 +718,8 @@ const mediaFormatada = computed(() => {
 
 // --- Fetch performance chart when discipline changes ---
 watch(filtroDisciplina, async (newVal) => {
-  if (newVal && user.value) {
-    const data = await fetchStudentScoresOverTime(user.value.id, newVal)
+  if (newVal && usuario.value.id) {
+    const data = await fetchStudentScoresOverTime(usuario.value.id, newVal)
     dadosPerformance.value = data
   } else {
     dadosPerformance.value = { rotulos: [], valores: [] }
@@ -656,16 +782,15 @@ const dificuldadesFiltradas = computed(() =>
   todasDificuldades.sort((a, b) => a.pontuacao - b.pontuacao)
 )
 
-// --- onMounted ---
+// --- Init dashboard ---
+const runInit = async () => {
+  if (isAdmin.value || isPedagogue.value) await initAdmin()
+  if (isTeacher.value) await initTeacher()
+  if (isStudent.value) await initStudent()
+}
+
 onMounted(async () => {
-  if (isAdmin.value || isPedagogue.value) {
-    await initAdmin()
-  }
-  if (isTeacher.value) {
-    await initTeacher()
-  }
-  if (isStudent.value) {
-    await initStudent()
-  }
+  await ensureProfile()
+  await runInit()
 })
 </script>

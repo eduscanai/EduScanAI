@@ -14,7 +14,7 @@ interface Submission {
 
 export const useSubmissions = () => {
   const supabase = useSupabaseClient()
-  const user = useSupabaseUser()
+  const { usuario } = useUsuario()
 
   const submissions = ref<Submission[]>([])
   const loading = ref(false)
@@ -60,13 +60,13 @@ export const useSubmissions = () => {
   }
 
   const getMySubmission = async (assignmentId: string) => {
-    if (!user.value?.id) return null
+    if (!usuario.value.id) return null
     try {
       const { data, error: err } = await supabase
         .from('submissions')
         .select('*')
         .eq('assignment_id', assignmentId)
-        .eq('student_id', user.value.id)
+        .eq('student_id', usuario.value.id!)
         .maybeSingle()
       if (err) throw err
       return data as Submission | null
@@ -76,7 +76,7 @@ export const useSubmissions = () => {
   }
 
   const submitWork = async (assignmentId: string, content: string, attachments: { name: string; url: string }[] = []) => {
-    if (!user.value?.id) throw new Error('Usuário não autenticado')
+    if (!usuario.value.id) throw new Error('Usuário não autenticado')
     loading.value = true
     error.value = null
     try {
@@ -84,7 +84,7 @@ export const useSubmissions = () => {
         .from('submissions')
         .upsert({
           assignment_id: assignmentId,
-          student_id: user.value.id,
+          student_id: usuario.value.id!,
           content,
           attachments,
           submitted_at: new Date().toISOString()
@@ -102,7 +102,7 @@ export const useSubmissions = () => {
   }
 
   const gradeSubmission = async (submissionId: string, score: number, feedback: string) => {
-    if (!user.value?.id) throw new Error('Usuário não autenticado')
+    if (!usuario.value.id) throw new Error('Usuário não autenticado')
     loading.value = true
     error.value = null
     try {
@@ -112,7 +112,7 @@ export const useSubmissions = () => {
           score,
           feedback,
           graded_at: new Date().toISOString(),
-          graded_by: user.value.id
+          graded_by: usuario.value.id!
         })
         .eq('id', submissionId)
         .select('*, profiles(id, full_name, email, avatar_url)')
@@ -130,12 +130,12 @@ export const useSubmissions = () => {
   // --- New aggregation functions ---
 
   const fetchGradedForStudent = async (subjectId?: string, limit = 10) => {
-    if (!user.value?.id) return []
+    if (!usuario.value.id) return []
     try {
       const { data, error: err } = await supabase
         .from('submissions')
         .select('*, assignments(id, title, class_id, subject_id, max_score, due_date, subjects(id, name), classes(name))')
-        .eq('student_id', user.value.id)
+        .eq('student_id', usuario.value.id!)
         .not('score', 'is', null)
         .order('graded_at', { ascending: false })
         .limit(limit)
@@ -154,12 +154,12 @@ export const useSubmissions = () => {
   }
 
   const fetchUngradedForTeacher = async (limit = 10) => {
-    if (!user.value?.id) return []
+    if (!usuario.value.id) return []
     try {
       const { data: linked } = await supabase
         .from('class_teachers')
         .select('class_id')
-        .eq('teacher_id', user.value.id)
+        .eq('teacher_id', usuario.value.id!)
       const classIds = linked?.map((c: any) => c.class_id) || []
       if (classIds.length === 0) return []
 
@@ -187,12 +187,12 @@ export const useSubmissions = () => {
   }
 
   const countUngradedForTeacher = async () => {
-    if (!user.value?.id) return 0
+    if (!usuario.value.id) return 0
     try {
       const { data: linked } = await supabase
         .from('class_teachers')
         .select('class_id')
-        .eq('teacher_id', user.value.id)
+        .eq('teacher_id', usuario.value.id!)
       const classIds = linked?.map((c: any) => c.class_id) || []
       if (classIds.length === 0) return 0
 

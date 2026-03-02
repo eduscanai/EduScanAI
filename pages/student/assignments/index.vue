@@ -51,7 +51,7 @@
               </div>
               <div class="text-right">
                 <p v-if="a.due_date" :class="['text-xs font-medium', estaVencida(a.due_date) && a._status === 'pendente' ? 'text-critical-500' : 'text-gray-500']">
-                  {{ estaVencida(a.due_date) && a._status === 'pendente' ? 'Vencida' : 'Prazo' }}: {{ formatarData(a.due_date) }}
+                  {{ estaVencida(a.due_date) && a._status === 'pendente' ? 'Atrasada' : 'Prazo' }}: {{ formatarData(a.due_date) }}
                 </p>
                 <p v-else class="text-xs text-gray-400">Sem prazo</p>
               </div>

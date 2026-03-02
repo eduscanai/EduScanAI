@@ -144,6 +144,89 @@
         </Cartao>
       </div>
 
+      <!-- Aba Atividades -->
+      <div v-if="abaAtiva === 'atividades'">
+        <!-- Filtros -->
+        <Cartao class="mb-6">
+          <div class="flex flex-col sm:flex-row gap-4">
+            <div class="flex-1">
+              <BarraBusca
+                :modelValue="buscaAtividade"
+                @update:modelValue="buscaAtividade = $event"
+                texto-reservado="Buscar atividade por nome..."
+              />
+            </div>
+            <div class="w-full sm:w-56">
+              <CampoSelecao
+                :modelValue="filtroStatusAtividade"
+                @update:modelValue="filtroStatusAtividade = $event as string"
+                texto-reservado="Todos os status"
+                :opcoes="opcoesFiltroStatus"
+              />
+            </div>
+          </div>
+        </Cartao>
+
+        <!-- Lista -->
+        <Cartao>
+          <div class="divide-y divide-gray-200">
+            <div
+              v-for="atv in atividadesPaginadas"
+              :key="atv.id"
+              class="flex items-center justify-between py-3"
+            >
+              <div class="flex-1 min-w-0">
+                <NuxtLink
+                  :to="`/teacher/assignments/${atv.id}`"
+                  class="text-sm font-semibold text-primary-500 hover:text-primary-600 no-underline"
+                >
+                  {{ atv.title }}
+                </NuxtLink>
+                <p class="text-xs text-gray-500 mt-0.5">
+                  {{ atv.subjects?.name || 'Sem disciplina' }}
+                  {{ atv.profiles?.full_name ? ' · ' + atv.profiles.full_name : '' }}
+                  {{ atv.due_date ? ' · Prazo: ' + formatarData(atv.due_date) : '' }}
+                </p>
+              </div>
+              <span :class="['inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ml-3', classeStatusAtividade(atv.status)]">
+                {{ rotuloStatusAtividade(atv.status) }}
+              </span>
+            </div>
+            <p v-if="atividadesFiltradas.length === 0" class="py-8 text-center text-sm text-gray-500">
+              {{ buscaAtividade || filtroStatusAtividade ? 'Nenhuma atividade encontrada' : 'Nenhuma atividade criada para esta turma' }}
+            </p>
+          </div>
+
+          <!-- Paginacao -->
+          <div v-if="totalPaginasAtividades > 1" class="flex items-center justify-between pt-4 mt-4 border-t border-gray-200">
+            <p class="text-xs text-gray-500">
+              {{ (paginaAtividade - 1) * 10 + 1 }}–{{ Math.min(paginaAtividade * 10, atividadesFiltradas.length) }} de {{ atividadesFiltradas.length }}
+            </p>
+            <div class="flex items-center gap-1">
+              <button
+                @click="paginaAtividade--"
+                :disabled="paginaAtividade <= 1"
+                class="p-1.5 rounded-lg text-gray-500 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
+              >
+                <Icone :tamanho="16">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+                </Icone>
+              </button>
+              <span class="text-xs text-gray-600 px-2">{{ paginaAtividade }} / {{ totalPaginasAtividades }}</span>
+              <button
+                @click="paginaAtividade++"
+                :disabled="paginaAtividade >= totalPaginasAtividades"
+                class="p-1.5 rounded-lg text-gray-500 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
+              >
+                <Icone :tamanho="16">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                </Icone>
+              </button>
+            </div>
+          </div>
+        </Cartao>
+      </div>
+
       <!-- Aba Info -->
       <div v-if="abaAtiva === 'info'">
         <Cartao>
@@ -324,12 +407,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import Icone from '~/components/ui/Icone/Icone.vue'
 import Avatar from '~/components/ui/Avatar/Avatar.vue'
 import Cartao from '~/components/layout/Cartao/Cartao.vue'
 import CampoSelecao from '~/components/form/CampoSelecao/CampoSelecao.vue'
+import BarraBusca from '~/components/form/BarraBusca/BarraBusca.vue'
 import Modal from '~/components/feedback/Modal/Modal.vue'
 import DialogoConfirmacao from '~/components/feedback/DialogoConfirmacao/DialogoConfirmacao.vue'
 import Notificacao from '~/components/feedback/Notificacao/Notificacao.vue'
@@ -354,6 +438,8 @@ const {
 const { academicYears, fetchAcademicYears } = useAcademicYear()
 const { subjects, fetchSubjects } = useSubjects()
 
+const { listAssignments, assignments: atividades } = useAssignments()
+
 const carregando = ref(true)
 const turma = ref<any>(null)
 const alunos = ref<any[]>([])
@@ -364,6 +450,7 @@ const abaAtiva = ref('alunos')
 const abas = computed(() => [
   { id: 'alunos', label: 'Alunos', count: alunos.value.length },
   { id: 'professores', label: 'Professores', count: professores.value.length },
+  { id: 'atividades', label: 'Atividades', count: atividades.value.length },
   { id: 'info', label: 'Informações' }
 ])
 
@@ -387,6 +474,58 @@ const rotuloTurno = (shift: string | null | undefined) => {
   const mapa: Record<string, string> = { morning: 'Matutino', afternoon: 'Vespertino', evening: 'Noturno' }
   return mapa[shift] || shift
 }
+
+// --- Atividades helpers ---
+const buscaAtividade = ref('')
+const filtroStatusAtividade = ref('')
+const paginaAtividade = ref(1)
+
+const opcoesFiltroStatus = [
+  { rotulo: 'Todas', valor: '' },
+  { rotulo: 'Ativas', valor: 'published' },
+  { rotulo: 'Concluídas', valor: 'closed' },
+  { rotulo: 'Rascunho', valor: 'draft' }
+]
+
+const atividadesFiltradas = computed(() => {
+  let lista = atividades.value
+  if (filtroStatusAtividade.value) {
+    lista = lista.filter(a => a.status === filtroStatusAtividade.value)
+  }
+  if (buscaAtividade.value.trim()) {
+    const termo = buscaAtividade.value.toLowerCase()
+    lista = lista.filter(a => a.title.toLowerCase().includes(termo))
+  }
+  return lista
+})
+
+const totalPaginasAtividades = computed(() => Math.ceil(atividadesFiltradas.value.length / 10))
+
+const atividadesPaginadas = computed(() => {
+  const inicio = (paginaAtividade.value - 1) * 10
+  return atividadesFiltradas.value.slice(inicio, inicio + 10)
+})
+
+// Reset página ao mudar filtros
+watch([buscaAtividade, filtroStatusAtividade], () => {
+  paginaAtividade.value = 1
+})
+
+const rotuloStatusAtividade = (s: string) => {
+  const m: Record<string, string> = { draft: 'Rascunho', published: 'Ativa', closed: 'Concluída' }
+  return m[s] || s
+}
+
+const classeStatusAtividade = (s: string) => {
+  const m: Record<string, string> = {
+    draft: 'bg-gray-100 text-gray-600',
+    published: 'bg-green-50 text-green-700',
+    closed: 'bg-amber-50 text-amber-700'
+  }
+  return m[s] || ''
+}
+
+const formatarData = (d: string) => new Date(d).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
 
 // --- Aba Info ---
 const formInfo = ref({ name: '', grade_level: '', shift: '', academic_year_id: '' })
@@ -563,7 +702,8 @@ onMounted(async () => {
 
     const [alunosData, professoresData] = await Promise.all([
       fetchClassStudents(classId),
-      fetchClassTeachers(classId)
+      fetchClassTeachers(classId),
+      listAssignments(classId)
     ])
     alunos.value = alunosData
     professores.value = professoresData

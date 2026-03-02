@@ -60,8 +60,8 @@
             :subject="turma.subject"
             :grade="turma.grade"
             :student-count="turma.studentCount"
-            :health-score="turma.healthScore"
-            :ai-summary="turma.aiSummary"
+            :shift="turma.shift"
+            :academic-year="turma.academicYear"
             :icon="turma.icon"
             :icon-bg="turma.iconBg"
             :to="turma.to"
@@ -199,15 +199,18 @@ const stats = computed(() => [
 
 // Subject icon mapping
 const iconMap: Record<string, { icon: string; bg: string }> = {
-  'matemática': { icon: 'sigma', bg: '#6f42c1' },
-  'física': { icon: 'rocket', bg: '#6f42c1' },
-  'história': { icon: 'book-open', bg: '#f59e0b' },
-  'geografia': { icon: 'globe', bg: '#20c997' },
-  'química': { icon: 'flask-conical', bg: '#dc3545' },
-  'biologia': { icon: 'leaf', bg: '#28a745' },
+  'matemática': { icon: 'sigma', bg: '#1132d4' },
+  'física': { icon: 'rocket', bg: '#2563eb' },
+  'história': { icon: 'book-open', bg: '#d97706' },
+  'geografia': { icon: 'globe', bg: '#0d9488' },
+  'química': { icon: 'flask-conical', bg: '#dc2626' },
+  'biologia': { icon: 'leaf', bg: '#16a34a' },
   'português': { icon: 'book-open', bg: '#1132d4' },
   'língua portuguesa': { icon: 'book-open', bg: '#1132d4' },
-  'inglês': { icon: 'globe', bg: '#0dcaf0' }
+  'inglês': { icon: 'globe', bg: '#0891b2' },
+  'ciências': { icon: 'flask-conical', bg: '#0d9488' },
+  'artes': { icon: 'leaf', bg: '#d97706' },
+  'educação física': { icon: 'rocket', bg: '#16a34a' }
 }
 
 const getIconForClass = (className: string) => {
@@ -215,8 +218,11 @@ const getIconForClass = (className: string) => {
   for (const [key, val] of Object.entries(iconMap)) {
     if (lower.includes(key)) return val
   }
-  return { icon: 'book-open', bg: '#6f42c1' }
+  return { icon: 'book-open', bg: '#1132d4' }
 }
+
+// Shift labels
+const turnoLabel: Record<string, string> = { morning: 'Matutino', afternoon: 'Vespertino', evening: 'Noturno' }
 
 // Format classes for CartaoTurma
 const turmasFormatadas = computed(() =>
@@ -226,8 +232,8 @@ const turmasFormatadas = computed(() =>
       subject: c.name,
       grade: c.grade_level || '',
       studentCount: studentCounts.value[c.id] || 0,
-      healthScore: 0,
-      aiSummary: c.academic_years?.name || '',
+      shift: turnoLabel[c.shift || ''] || '',
+      academicYear: c.academic_years?.name || '',
       icon,
       iconBg: bg,
       to: `/turmas/${c.id}`

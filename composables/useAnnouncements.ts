@@ -18,7 +18,6 @@ interface Announcement {
 export const useAnnouncements = () => {
   const supabase = useSupabaseClient()
   const { usuario } = useUsuario()
-  const user = useSupabaseUser()
 
   const announcements = ref<Announcement[]>([])
   const loading = ref(false)
@@ -30,7 +29,7 @@ export const useAnnouncements = () => {
     try {
       let query = supabase
         .from('announcements')
-        .select('*, profiles(full_name, avatar_url), classes:target_id(name)')
+        .select('*, profiles(full_name, avatar_url)')
         .eq('school_id', usuario.value.schoolId)
         .order('created_at', { ascending: false })
 
@@ -42,6 +41,7 @@ export const useAnnouncements = () => {
       if (err) throw err
       announcements.value = (data || []) as Announcement[]
     } catch (e: any) {
+      console.error('Erro ao listar avisos:', e)
       error.value = e.message
     } finally {
       loading.value = false
@@ -53,7 +53,7 @@ export const useAnnouncements = () => {
     try {
       const { data, error: err } = await supabase
         .from('announcements')
-        .select('*, profiles(full_name, avatar_url), classes:target_id(name)')
+        .select('*, profiles(full_name, avatar_url)')
         .eq('id', id)
         .eq('school_id', usuario.value.schoolId)
         .single()
@@ -76,7 +76,8 @@ export const useAnnouncements = () => {
     priority?: 'low' | 'normal' | 'high'
     publish?: boolean
   }) => {
-    if (!user.value?.id) throw new Error('Usuário não autenticado')
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session?.user?.id) throw new Error('Usuário não autenticado')
     loading.value = true
     error.value = null
     try {
@@ -84,7 +85,7 @@ export const useAnnouncements = () => {
         .from('announcements')
         .insert({
           school_id: usuario.value.schoolId,
-          author_id: user.value.id,
+          author_id: session.user.id,
           title: data.title,
           content: data.content || null,
           target_type: data.target_type,

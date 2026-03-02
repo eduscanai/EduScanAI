@@ -21,7 +21,6 @@ interface Assignment {
 export const useAssignments = () => {
   const supabase = useSupabaseClient()
   const { usuario } = useUsuario()
-  const user = useSupabaseUser()
   const { isTeacher, isStudent } = usePermissions()
 
   const assignments = ref<Assignment[]>([])
@@ -30,23 +29,14 @@ export const useAssignments = () => {
 
   // Helper: get teacher's class IDs
   const getTeacherClassIds = async (): Promise<string[]> => {
-    if (!user.value?.id) return []
+    if (!usuario.value.id) return []
     const { data } = await supabase
       .from('class_teachers')
       .select('class_id')
-      .eq('teacher_id', user.value.id)
+      .eq('teacher_id', usuario.value.id)
     return data?.map((c: any) => c.class_id) || []
   }
 
-  // Helper: get student's class IDs
-  const getStudentClassIds = async (): Promise<string[]> => {
-    if (!user.value?.id) return []
-    const { data } = await supabase
-      .from('class_students')
-      .select('class_id')
-      .eq('student_id', user.value.id)
-    return data?.map((c: any) => c.class_id) || []
-  }
 
   const listAssignments = async (classId?: string, status?: string) => {
     loading.value = true
@@ -64,9 +54,11 @@ export const useAssignments = () => {
         if (classIds.length === 0) { assignments.value = []; return }
         query = query.in('class_id', classIds)
       } else if (isStudent.value) {
-        const classIds = await getStudentClassIds()
-        if (classIds.length === 0) { assignments.value = []; return }
-        query = query.in('class_id', classIds).eq('status', 'published')
+        // Query direta — a RLS (assignments_select_student) já filtra por turmas matriculadas
+        query = query.eq('school_id', usuario.value.schoolId).eq('status', 'published')
+      } else {
+        // Admin / pedagogue
+        query = query.eq('school_id', usuario.value.schoolId)
       }
 
       if (status) query = query.eq('status', status)
@@ -127,15 +119,13 @@ export const useAssignments = () => {
   }
 
   const fetchPendingForStudent = async () => {
-    if (!user.value?.id) return []
+    if (!usuario.value.id) return []
     try {
-      const classIds = await getStudentClassIds()
-      if (classIds.length === 0) return []
-
+      // Query direta — a RLS (assignments_select_student) já filtra por turmas matriculadas
       const { data: allAssignments, error: err1 } = await supabase
         .from('assignments')
         .select('*, classes(name), subjects(name)')
-        .in('class_id', classIds)
+        .eq('school_id', usuario.value.schoolId)
         .eq('status', 'published')
         .order('due_date', { ascending: true })
 
@@ -145,7 +135,7 @@ export const useAssignments = () => {
       const { data: mySubmissions } = await supabase
         .from('submissions')
         .select('assignment_id')
-        .eq('student_id', user.value.id)
+        .eq('student_id', usuario.value.id!)
 
       const submittedIds = new Set((mySubmissions || []).map((s: any) => s.assignment_id))
       return (allAssignments as any[]).filter(a => !submittedIds.has(a.id))
