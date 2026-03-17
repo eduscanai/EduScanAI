@@ -48,7 +48,7 @@ export const useClasses = () => {
       if (isTeacher.value) {
         if (!usuario.value.id) { classes.value = []; return }
         const { data: linked } = await supabase
-          .from('class_teachers')
+          .from('turma_professores')
           .select('class_id')
           .eq('teacher_id', usuario.value.id)
         const classIds = linked?.map((c: any) => c.class_id) || []
@@ -57,8 +57,8 @@ export const useClasses = () => {
           return
         }
         let query = supabase
-          .from('classes')
-          .select('*, academic_years(name), profiles!teacher_id(id, full_name)')
+          .from('turmas')
+          .select('*, anos_letivos(name), perfis!teacher_id(id, full_name)')
           .in('id', classIds)
         if (params.academicYearId) query = query.eq('academic_year_id', params.academicYearId)
         if (params.search) query = query.ilike('name', `%${params.search}%`)
@@ -69,8 +69,8 @@ export const useClasses = () => {
       } else if (isStudent.value) {
         // Query direta — a RLS (classes_select_student) já filtra por turmas matriculadas
         let query = supabase
-          .from('classes')
-          .select('*, academic_years(name), profiles!teacher_id(id, full_name)')
+          .from('turmas')
+          .select('*, anos_letivos(name), perfis!teacher_id(id, full_name)')
           .eq('school_id', usuario.value.schoolId)
         if (params.academicYearId) query = query.eq('academic_year_id', params.academicYearId)
         if (params.search) query = query.ilike('name', `%${params.search}%`)
@@ -80,8 +80,8 @@ export const useClasses = () => {
         classes.value = (data || []) as ClassData[]
       } else {
         let query = supabase
-          .from('classes')
-          .select('*, academic_years(name), profiles!teacher_id(id, full_name)')
+          .from('turmas')
+          .select('*, anos_letivos(name), perfis!teacher_id(id, full_name)')
           .eq('school_id', usuario.value.schoolId)
         if (params.academicYearId) query = query.eq('academic_year_id', params.academicYearId)
         if (params.search) query = query.ilike('name', `%${params.search}%`)
@@ -102,8 +102,8 @@ export const useClasses = () => {
     error.value = null
     try {
       const { data, error: err } = await supabase
-        .from('classes')
-        .select('*, academic_years(name), profiles!teacher_id(id, full_name)')
+        .from('turmas')
+        .select('*, anos_letivos(name), perfis!teacher_id(id, full_name)')
         .eq('id', id)
         .single()
       if (err) throw err
@@ -122,9 +122,9 @@ export const useClasses = () => {
     error.value = null
     try {
       const { data, error: err } = await supabase
-        .from('classes')
+        .from('turmas')
         .insert({ ...classData, school_id: usuario.value.schoolId })
-        .select('*, academic_years(name), profiles!teacher_id(id, full_name)')
+        .select('*, anos_letivos(name), perfis!teacher_id(id, full_name)')
         .single()
       if (err) throw err
       return data as ClassData
@@ -141,11 +141,11 @@ export const useClasses = () => {
     error.value = null
     try {
       const { data, error: err } = await supabase
-        .from('classes')
+        .from('turmas')
         .update(updates)
         .eq('id', id)
         .eq('school_id', usuario.value.schoolId)
-        .select('*, academic_years(name), profiles!teacher_id(id, full_name)')
+        .select('*, anos_letivos(name), perfis!teacher_id(id, full_name)')
         .single()
       if (err) throw err
       return data as ClassData
@@ -162,7 +162,7 @@ export const useClasses = () => {
     error.value = null
     try {
       const { error: err } = await supabase
-        .from('classes')
+        .from('turmas')
         .delete()
         .eq('id', id)
         .eq('school_id', usuario.value.schoolId)
@@ -179,8 +179,8 @@ export const useClasses = () => {
   const fetchClassStudents = async (classId: string) => {
     try {
       const { data, error: err } = await supabase
-        .from('class_students')
-        .select('*, profiles(id, full_name, email, avatar_url)')
+        .from('turma_alunos')
+        .select('*, perfis(id, full_name, email, avatar_url)')
         .eq('class_id', classId)
         .order('enrolled_at', { ascending: false })
       if (err) throw err
@@ -194,7 +194,7 @@ export const useClasses = () => {
   const addStudent = async (classId: string, studentId: string) => {
     try {
       const { error: err } = await supabase
-        .from('class_students')
+        .from('turma_alunos')
         .insert({ class_id: classId, student_id: studentId })
       if (err) throw err
     } catch (e: any) {
@@ -206,7 +206,7 @@ export const useClasses = () => {
   const removeStudent = async (classId: string, studentId: string) => {
     try {
       const { error: err } = await supabase
-        .from('class_students')
+        .from('turma_alunos')
         .delete()
         .eq('class_id', classId)
         .eq('student_id', studentId)
@@ -221,8 +221,8 @@ export const useClasses = () => {
   const fetchClassTeachers = async (classId: string) => {
     try {
       const { data, error: err } = await supabase
-        .from('class_teachers')
-        .select('*, profiles(id, full_name, email, avatar_url), subjects(id, name, code)')
+        .from('turma_professores')
+        .select('*, perfis(id, full_name, email, avatar_url), disciplinas(id, name, code)')
         .eq('class_id', classId)
       if (err) throw err
       return (data || []) as ClassTeacher[]
@@ -235,7 +235,7 @@ export const useClasses = () => {
   const addTeacher = async (classId: string, teacherId: string, subjectId: string) => {
     try {
       const { error: err } = await supabase
-        .from('class_teachers')
+        .from('turma_professores')
         .insert({ class_id: classId, teacher_id: teacherId, subject_id: subjectId })
       if (err) throw err
     } catch (e: any) {
@@ -247,7 +247,7 @@ export const useClasses = () => {
   const removeTeacher = async (classId: string, teacherId: string, subjectId: string) => {
     try {
       const { error: err } = await supabase
-        .from('class_teachers')
+        .from('turma_professores')
         .delete()
         .eq('class_id', classId)
         .eq('teacher_id', teacherId)
@@ -263,7 +263,7 @@ export const useClasses = () => {
   const fetchAvailableStudents = async (schoolId: string, search = '') => {
     try {
       let query = supabase
-        .from('profiles')
+        .from('perfis')
         .select('id, full_name, email, avatar_url')
         .eq('school_id', schoolId)
         .eq('role', 'student')
@@ -283,7 +283,7 @@ export const useClasses = () => {
   const fetchAvailableTeachers = async (schoolId: string, search = '') => {
     try {
       let query = supabase
-        .from('profiles')
+        .from('perfis')
         .select('id, full_name, email, avatar_url')
         .eq('school_id', schoolId)
         .in('role', ['teacher', 'admin', 'pedagogue'])
@@ -313,7 +313,7 @@ export const useClasses = () => {
         academic_year_id: academicYearId || null
       }))
       const { data, error: err } = await supabase
-        .from('classes')
+        .from('turmas')
         .insert(inserts)
         .select('id')
       if (err) throw err

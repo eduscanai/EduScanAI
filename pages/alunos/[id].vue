@@ -1,9 +1,7 @@
 <template>
   <div>
         <!-- Loading -->
-        <div v-if="loadingPage" class="py-12 text-center">
-          <p class="text-sm text-gray-500">Carregando aluno...</p>
-        </div>
+        <Carregando v-if="loadingPage" texto="Carregando aluno..." />
 
         <!-- Not found -->
         <div v-else-if="!aluno" class="py-12 text-center">
@@ -254,8 +252,8 @@ onMounted(async () => {
 
   // Fetch submissions for this specific student (not the logged-in user)
   const { data } = await supabase
-    .from('submissions')
-    .select('*, assignments(id, title, class_id, subject_id, max_score, due_date, subjects(id, name), classes(name))')
+    .from('envios')
+    .select('*, atividades(id, title, class_id, subject_id, max_score, due_date, disciplinas(id, name), turmas(name))')
     .eq('student_id', alunoId)
     .not('score', 'is', null)
     .order('graded_at', { ascending: false })

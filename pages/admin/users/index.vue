@@ -45,9 +45,7 @@
 
     <!-- Tabela -->
     <Cartao>
-      <div v-if="loading" class="py-12 text-center">
-        <p class="text-body text-text-secondary">Carregando usuários...</p>
-      </div>
+      <Carregando v-if="loading" texto="Carregando usuários..." />
 
       <TabelaDados v-else :colunas="colunas" :dados="users">
         <template #celula-full_name="{ linha }">

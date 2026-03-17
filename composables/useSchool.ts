@@ -38,7 +38,7 @@ export const useSchool = () => {
     error.value = null
     try {
       const { data, error: err } = await supabase
-        .from('schools')
+        .from('escolas')
         .select('*')
         .eq('id', usuario.value.schoolId)
         .single()
@@ -56,10 +56,10 @@ export const useSchool = () => {
     const schoolId = usuario.value.schoolId
 
     const [turmas, alunos, professores, pedagogos] = await Promise.all([
-      supabase.from('classes').select('id', { count: 'exact', head: true }).eq('school_id', schoolId),
-      supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('school_id', schoolId).eq('role', 'student'),
-      supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('school_id', schoolId).eq('role', 'teacher'),
-      supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('school_id', schoolId).eq('role', 'pedagogue')
+      supabase.from('turmas').select('id', { count: 'exact', head: true }).eq('school_id', schoolId),
+      supabase.from('perfis').select('id', { count: 'exact', head: true }).eq('school_id', schoolId).eq('role', 'student'),
+      supabase.from('perfis').select('id', { count: 'exact', head: true }).eq('school_id', schoolId).eq('role', 'teacher'),
+      supabase.from('perfis').select('id', { count: 'exact', head: true }).eq('school_id', schoolId).eq('role', 'pedagogue')
     ])
 
     counts.value = {
@@ -76,7 +76,7 @@ export const useSchool = () => {
     error.value = null
     try {
       const { data, error: err } = await supabase
-        .from('schools')
+        .from('escolas')
         .update(updates)
         .eq('id', usuario.value.schoolId)
         .select()

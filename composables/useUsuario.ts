@@ -36,7 +36,7 @@ export const useUsuario = () => {
     if (profileRole.value && profileSchoolId.value) return
 
     const { data } = await supabase
-      .from('profiles')
+      .from('perfis')
       .select('role, school_id')
       .eq('id', uid)
       .single()

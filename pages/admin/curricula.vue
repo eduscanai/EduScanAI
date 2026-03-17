@@ -5,9 +5,7 @@
       <p class="text-body text-text-secondary mt-1">Defina quais disciplinas cada série deve ter</p>
     </div>
 
-    <div v-if="loadingPage" class="py-12 text-center">
-      <p class="text-body text-text-secondary">Carregando...</p>
-    </div>
+    <Carregando v-if="loadingPage" texto="Carregando..." />
 
     <div v-else class="grid grid-cols-1 lg:grid-cols-3 gap-6">
       <!-- Lista de séries -->

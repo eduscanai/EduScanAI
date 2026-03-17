@@ -14,6 +14,11 @@ export default defineNuxtConfig({
     dirs: ['stores', 'composables', 'utils']
   },
 
+  // Componentes auto-importados pelo nome do arquivo (sem prefixo de pasta)
+  components: {
+    pathPrefix: false
+  },
+
   // CSS global
   css: ['~/assets/styles/main.css'],
 

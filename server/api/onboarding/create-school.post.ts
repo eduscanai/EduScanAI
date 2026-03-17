@@ -56,7 +56,7 @@ export default defineEventHandler(async (event) => {
 
   // 1. Verificar se slug já existe
   const { data: existingSchool } = await client
-    .from('schools')
+    .from('escolas')
     .select('id')
     .eq('slug', slug)
     .maybeSingle()
@@ -70,7 +70,7 @@ export default defineEventHandler(async (event) => {
 
   // 2. Criar a escola
   const { data: school, error: schoolError } = await client
-    .from('schools')
+    .from('escolas')
     .insert({
       name: school_name.trim(),
       slug: slug.trim(),
@@ -97,7 +97,7 @@ export default defineEventHandler(async (event) => {
 
   if (authError) {
     // Rollback: deletar a escola criada
-    await client.from('schools').delete().eq('id', school.id)
+    await client.from('escolas').delete().eq('id', school.id)
 
     throw createError({
       statusCode: 400,
@@ -108,7 +108,7 @@ export default defineEventHandler(async (event) => {
   // 4. Criar ano letivo padrão
   const anoAtual = new Date().getFullYear()
   await client
-    .from('academic_years')
+    .from('anos_letivos')
     .insert({
       school_id: school.id,
       name: `${anoAtual}`,

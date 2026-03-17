@@ -28,6 +28,19 @@
         class="absolute z-20 left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto"
       >
         <label
+          v-if="opcoes.length > 1"
+          class="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 cursor-pointer transition-colors border-b border-gray-100"
+        >
+          <input
+            type="checkbox"
+            :checked="todasSelecionadas"
+            :indeterminate="algumasSelecionadas"
+            class="w-4 h-4 rounded border-gray-300 text-primary-500 accent-primary-500"
+            @change="alternarTodas"
+          >
+          <span class="text-sm font-medium text-gray-700">Selecionar todas</span>
+        </label>
+        <label
           v-for="opcao in opcoes"
           :key="opcao.valor"
           class="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 cursor-pointer transition-colors"
@@ -82,6 +95,22 @@ const textoExibido = computed(() => {
   }
   return `${props.modelValue.length} turmas selecionadas`
 })
+
+const todasSelecionadas = computed(() =>
+  props.opcoes.length > 0 && props.modelValue.length === props.opcoes.length
+)
+
+const algumasSelecionadas = computed(() =>
+  props.modelValue.length > 0 && props.modelValue.length < props.opcoes.length
+)
+
+const alternarTodas = () => {
+  if (todasSelecionadas.value) {
+    emit('update:modelValue', [])
+  } else {
+    emit('update:modelValue', props.opcoes.map(o => o.valor))
+  }
+}
 
 const alternar = (valor: string) => {
   const atual = [...props.modelValue]

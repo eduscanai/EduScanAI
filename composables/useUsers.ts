@@ -38,7 +38,7 @@ export const useUsers = () => {
 
     try {
       let query = supabase
-        .from('profiles')
+        .from('perfis')
         .select('*', { count: 'exact' })
         .eq('school_id', usuario.value.schoolId)
         .neq('role', 'admin')
@@ -74,7 +74,7 @@ export const useUsers = () => {
     error.value = null
     try {
       const { data, error: err } = await supabase
-        .from('profiles')
+        .from('perfis')
         .select('*')
         .eq('id', id)
         .single()
@@ -93,7 +93,7 @@ export const useUsers = () => {
     error.value = null
     try {
       const { data, error: err } = await supabase
-        .from('profiles')
+        .from('perfis')
         .update(updates)
         .eq('id', id)
         .select()
@@ -165,7 +165,7 @@ export const useUsers = () => {
 
       if (classId) {
         const { data: classStudents } = await supabase
-          .from('class_students')
+          .from('turma_alunos')
           .select('student_id')
           .eq('class_id', classId)
         studentIds = classStudents?.map((cs: any) => cs.student_id) || []
@@ -173,7 +173,7 @@ export const useUsers = () => {
       }
 
       let query = supabase
-        .from('profiles')
+        .from('perfis')
         .select('*', { count: 'exact' })
         .eq('school_id', usuario.value.schoolId)
         .eq('role', 'student')

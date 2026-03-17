@@ -76,12 +76,21 @@
           <h3 class="text-heading-3 mb-4">Dados do Aluno</h3>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label for="matricula" class="form-label">Matrícula</label>
-              <input id="matricula" type="text" v-model="form.matricula" class="form-input" placeholder="Nº da matrícula" />
+              <label for="cpf" class="form-label">CPF</label>
+              <input
+                id="cpf"
+                type="text"
+                :value="cpfFormatado"
+                @input="onCpfInput"
+                class="form-input"
+                placeholder="000.000.000-00"
+                maxlength="14"
+              />
             </div>
             <div>
-              <label for="cpf" class="form-label">CPF</label>
-              <input id="cpf" type="text" v-model="form.cpf" class="form-input" placeholder="000.000.000-00" />
+              <label for="matricula" class="form-label">Matrícula</label>
+              <input id="matricula" type="text" v-model="form.matricula" class="form-input bg-gray-50" placeholder="Gerada automaticamente" readonly />
+              <p class="mt-1 text-xs text-text-secondary">Formato: {{ new Date().getFullYear() }} + código sequencial</p>
             </div>
             <div>
               <label for="sexo" class="form-label">Sexo</label>
@@ -104,8 +113,12 @@
           <NuxtLink to="/admin/users" class="btn-outline no-underline">
             Cancelar
           </NuxtLink>
-          <button @click="criar" :disabled="loading" class="btn-primary">
-            {{ loading ? 'Criando...' : 'Criar Usuário' }}
+          <button @click="criar" :disabled="criando" class="btn-primary flex items-center gap-2 disabled:opacity-50">
+            <svg v-if="criando" class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+            </svg>
+            {{ criando ? 'Criando...' : 'Criar Usuário' }}
           </button>
         </div>
       </Cartao>
@@ -135,7 +148,10 @@ definePageMeta({
   requiredRole: 'admin'
 })
 
-const { loading, createUser } = useUsers()
+const supabase = useSupabaseClient()
+const { usuario } = useUsuario()
+const { createUser } = useUsers()
+const criando = ref(false)
 
 const form = ref({
   full_name: '',
@@ -146,6 +162,49 @@ const form = ref({
   cpf: '',
   sexo: '',
   data_nascimento: ''
+})
+
+// Máscara de CPF
+const cpfFormatado = ref('')
+
+const formatarCpf = (valor: string) => {
+  const nums = valor.replace(/\D/g, '').slice(0, 11)
+  if (nums.length <= 3) return nums
+  if (nums.length <= 6) return `${nums.slice(0, 3)}.${nums.slice(3)}`
+  if (nums.length <= 9) return `${nums.slice(0, 3)}.${nums.slice(3, 6)}.${nums.slice(6)}`
+  return `${nums.slice(0, 3)}.${nums.slice(3, 6)}.${nums.slice(6, 9)}-${nums.slice(9)}`
+}
+
+const onCpfInput = (e: Event) => {
+  const input = e.target as HTMLInputElement
+  const nums = input.value.replace(/\D/g, '').slice(0, 11)
+  form.value.cpf = nums
+  cpfFormatado.value = formatarCpf(nums)
+  input.value = cpfFormatado.value
+}
+
+// Gerar matrícula automática (ANO + código sequencial)
+const gerarMatricula = async () => {
+  if (!usuario.value.schoolId) return
+  const ano = new Date().getFullYear()
+  const { count } = await supabase
+    .from('perfis')
+    .select('id', { count: 'exact', head: true })
+    .eq('school_id', usuario.value.schoolId)
+    .eq('role', 'student')
+  const seq = String((count || 0) + 1).padStart(4, '0')
+  form.value.matricula = `${ano}${seq}`
+}
+
+// Gerar matrícula quando selecionar role 'student'
+watch(() => form.value.role, (novoRole) => {
+  if (novoRole === 'student') {
+    gerarMatricula()
+  } else {
+    form.value.matricula = ''
+    form.value.cpf = ''
+    cpfFormatado.value = ''
+  }
 })
 
 const erros = ref<Record<string, string>>({})
@@ -203,7 +262,7 @@ const validar = () => {
 // Criar usuário
 const criar = async () => {
   if (!validar()) return
-
+  criando.value = true
   try {
     const payload: any = {
       email: form.value.email,
@@ -222,6 +281,7 @@ const criar = async () => {
 
     // Limpar formulário
     form.value = { full_name: '', email: '', password: '', role: '', matricula: '', cpf: '', sexo: '', data_nascimento: '' }
+    cpfFormatado.value = ''
 
     // Redirecionar após 1.5s
     setTimeout(() => {
@@ -230,6 +290,8 @@ const criar = async () => {
   } catch (e: any) {
     const msg = e.data?.message || e.message || 'Erro desconhecido'
     mostrarNotificacao('critico', 'Erro ao criar usuário', msg)
+  } finally {
+    criando.value = false
   }
 }
 </script>

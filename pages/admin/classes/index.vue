@@ -51,9 +51,7 @@
 
     <!-- Lista de turmas -->
     <Cartao>
-      <div v-if="loading" class="py-12 text-center">
-        <p class="text-body text-text-secondary">Carregando turmas...</p>
-      </div>
+      <Carregando v-if="loading" texto="Carregando turmas..." />
 
       <TabelaDados v-else :colunas="colunas" :dados="classes">
         <template #celula-name="{ linha }">
@@ -285,7 +283,7 @@ const professores = ref<{ id: string; full_name: string | null }[]>([])
 const fetchProfessores = async () => {
   if (!usuario.value.schoolId) return
   const { data } = await supabase
-    .from('profiles')
+    .from('perfis')
     .select('id, full_name')
     .eq('school_id', usuario.value.schoolId)
     .eq('role', 'teacher')

@@ -21,23 +21,26 @@
         <button
           v-if="!aviso.published_at"
           @click="publicarAviso"
-          :disabled="loading"
-          class="btn-primary text-sm"
+          :disabled="processando"
+          class="btn-primary text-sm flex items-center gap-2 disabled:opacity-50"
         >
-          Publicar
+          <svg v-if="processando" class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+          </svg>
+          {{ processando ? 'Publicando...' : 'Publicar' }}
         </button>
         <button
           @click="confirmarExclusao = true"
-          class="btn-destructive text-sm"
+          :disabled="processando"
+          class="btn-destructive text-sm disabled:opacity-50"
         >
           Excluir
         </button>
       </div>
     </div>
 
-    <div v-if="carregando" class="py-12 text-center">
-      <p class="text-body text-text-secondary">Carregando...</p>
-    </div>
+    <Carregando v-if="carregando" texto="Carregando..." />
 
     <div v-else-if="aviso" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
       <!-- Conteúdo -->
@@ -133,7 +136,8 @@ const announcementId = route.params.id as string
 const user = useSupabaseUser()
 const { isAdmin } = usePermissions()
 
-const { loading, getAnnouncement, publishAnnouncement, deleteAnnouncement } = useAnnouncements()
+const { getAnnouncement, publishAnnouncement, deleteAnnouncement } = useAnnouncements()
+const processando = ref(false)
 
 const carregando = ref(true)
 const aviso = ref<any>(null)
@@ -161,22 +165,28 @@ const rotuloPrioridade = computed(() => ({
 }[aviso.value?.priority] || 'Normal'))
 
 const publicarAviso = async () => {
+  processando.value = true
   try {
     aviso.value = await publishAnnouncement(announcementId)
     mostrarNotificacao('sucesso', 'Aviso publicado!')
   } catch {
     mostrarNotificacao('critico', 'Erro ao publicar')
+  } finally {
+    processando.value = false
   }
 }
 
 const excluirAviso = async () => {
   confirmarExclusao.value = false
+  processando.value = true
   try {
     await deleteAnnouncement(announcementId)
     mostrarNotificacao('sucesso', 'Aviso excluído')
     setTimeout(() => navigateTo('/announcements'), 1000)
   } catch {
     mostrarNotificacao('critico', 'Erro ao excluir')
+  } finally {
+    processando.value = false
   }
 }
 

@@ -19,7 +19,7 @@ export const useSubjects = () => {
     error.value = null
     try {
       const { data, error: err } = await supabase
-        .from('subjects')
+        .from('disciplinas')
         .select('id, school_id, name, code')
         .eq('school_id', usuario.value.schoolId)
         .order('name')
@@ -38,7 +38,7 @@ export const useSubjects = () => {
     error.value = null
     try {
       const { data, error: err } = await supabase
-        .from('subjects')
+        .from('disciplinas')
         .insert({
           name: subject.name,
           code: subject.code || null,
@@ -61,7 +61,7 @@ export const useSubjects = () => {
     error.value = null
     try {
       const { data, error: err } = await supabase
-        .from('subjects')
+        .from('disciplinas')
         .update(updates)
         .eq('id', id)
         .eq('school_id', usuario.value.schoolId)
@@ -82,7 +82,7 @@ export const useSubjects = () => {
     error.value = null
     try {
       const { error: err } = await supabase
-        .from('subjects')
+        .from('disciplinas')
         .delete()
         .eq('id', id)
         .eq('school_id', usuario.value.schoolId)
@@ -106,7 +106,7 @@ export const useSubjects = () => {
         code: item.code?.trim() || null
       }))
       const { data, error: err } = await supabase
-        .from('subjects')
+        .from('disciplinas')
         .insert(inserts)
         .select('id')
       if (err) throw err

@@ -17,11 +17,11 @@ export const useGradeCurricula = () => {
     if (!usuario.value.schoolId || !gradeLevel) return []
     try {
       const { data, error: err } = await supabase
-        .from('grade_curricula')
-        .select('*, subjects(id, name)')
+        .from('grade_curricular')
+        .select('*, disciplinas(id, name)')
         .eq('school_id', usuario.value.schoolId)
         .eq('grade_level', gradeLevel)
-        .order('subjects(name)')
+        .order('disciplinas(name)')
       if (err) throw err
       return (data || []) as GradeCurriculum[]
     } catch (e: any) {
@@ -36,11 +36,11 @@ export const useGradeCurricula = () => {
       // Get grade_levels from both grade_curricula and classes
       const [{ data: fromCurricula }, { data: fromClasses }] = await Promise.all([
         supabase
-          .from('grade_curricula')
+          .from('grade_curricular')
           .select('grade_level')
           .eq('school_id', usuario.value.schoolId),
         supabase
-          .from('classes')
+          .from('turmas')
           .select('grade_level')
           .eq('school_id', usuario.value.schoolId)
           .not('grade_level', 'is', null)
@@ -61,7 +61,7 @@ export const useGradeCurricula = () => {
     error.value = null
     try {
       const { error: err } = await supabase
-        .from('grade_curricula')
+        .from('grade_curricular')
         .insert({
           school_id: usuario.value.schoolId,
           grade_level: gradeLevel,
@@ -82,7 +82,7 @@ export const useGradeCurricula = () => {
     error.value = null
     try {
       const { error: err } = await supabase
-        .from('grade_curricula')
+        .from('grade_curricular')
         .delete()
         .eq('school_id', usuario.value.schoolId)
         .eq('grade_level', gradeLevel)
@@ -103,7 +103,7 @@ export const useGradeCurricula = () => {
     try {
       // Delete all existing for this grade_level
       const { error: delErr } = await supabase
-        .from('grade_curricula')
+        .from('grade_curricular')
         .delete()
         .eq('school_id', usuario.value.schoolId)
         .eq('grade_level', gradeLevel)
@@ -117,7 +117,7 @@ export const useGradeCurricula = () => {
           subject_id: sid
         }))
         const { error: insErr } = await supabase
-          .from('grade_curricula')
+          .from('grade_curricular')
           .insert(inserts)
         if (insErr) throw insErr
       }

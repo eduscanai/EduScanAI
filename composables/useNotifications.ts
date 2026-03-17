@@ -25,7 +25,7 @@ export const useNotifications = () => {
     loading.value = true
     try {
       const { data, error } = await supabase
-        .from('notifications')
+        .from('notificacoes')
         .select('*')
         .eq('user_id', user.value.id)
         .order('created_at', { ascending: false })
@@ -45,7 +45,7 @@ export const useNotifications = () => {
     if (!user.value?.id) return
     try {
       const { count, error } = await supabase
-        .from('notifications')
+        .from('notificacoes')
         .select('*', { count: 'exact', head: true })
         .eq('user_id', user.value.id)
         .is('read_at', null)
@@ -61,7 +61,7 @@ export const useNotifications = () => {
     if (!user.value?.id) return
     try {
       const { error } = await supabase
-        .from('notifications')
+        .from('notificacoes')
         .update({ read_at: new Date().toISOString() })
         .eq('id', id)
         .eq('user_id', user.value.id)
@@ -82,7 +82,7 @@ export const useNotifications = () => {
     if (!user.value?.id) return
     try {
       const { error } = await supabase
-        .from('notifications')
+        .from('notificacoes')
         .update({ read_at: new Date().toISOString() })
         .eq('user_id', user.value.id)
         .is('read_at', null)
@@ -102,7 +102,7 @@ export const useNotifications = () => {
     if (!user.value?.id) return
     try {
       const { error } = await supabase
-        .from('notifications')
+        .from('notificacoes')
         .delete()
         .eq('id', id)
         .eq('user_id', user.value.id)
@@ -136,7 +136,7 @@ export const useNotifications = () => {
         {
           event: 'INSERT',
           schema: 'public',
-          table: 'notifications',
+          table: 'notificacoes',
           filter: `user_id=eq.${user.value.id}`
         },
         (payload: any) => {

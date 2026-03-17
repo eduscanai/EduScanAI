@@ -252,7 +252,7 @@ onMounted(async () => {
   // Buscar dados da escola atual
   if (usuario.value.schoolId) {
     const { data } = await supabase
-      .from('schools')
+      .from('escolas')
       .select('name, logo_url')
       .eq('id', usuario.value.schoolId)
       .single()
@@ -265,8 +265,8 @@ onMounted(async () => {
 })
 
 const sugestoesDisciplinas = [
-  'Português', 'Matemática', 'Ciências', 'História',
-  'Geografia', 'Inglês', 'Educação Física', 'Artes',
+  'Língua Portuguesa', 'Matemática', 'Ciências', 'História',
+  'Geografia', 'Língua Inglesa', 'Educação Física', 'Arte',
   'Ensino Religioso'
 ]
 
@@ -321,7 +321,7 @@ const salvarEscola = async () => {
     }
 
     const { error } = await supabase
-      .from('schools')
+      .from('escolas')
       .update(updates)
       .eq('id', usuario.value.schoolId)
 
@@ -344,7 +344,7 @@ const salvarDisciplinas = async () => {
       name: name.trim()
     }))
 
-    const { error } = await supabase.from('subjects').insert(inserts)
+    const { error } = await supabase.from('disciplinas').insert(inserts)
     if (error) throw error
   } catch (e: any) {
     erroGeral.value = 'Erro ao salvar disciplinas: ' + e.message
@@ -358,13 +358,13 @@ const salvarTurma = async () => {
   try {
     // Buscar ano letivo atual
     const { data: ano } = await supabase
-      .from('academic_years')
+      .from('anos_letivos')
       .select('id')
       .eq('school_id', usuario.value.schoolId)
       .eq('is_current', true)
       .maybeSingle()
 
-    const { error } = await supabase.from('classes').insert({
+    const { error } = await supabase.from('turmas').insert({
       school_id: usuario.value.schoolId,
       academic_year_id: ano?.id || null,
       name: turma.value.name,

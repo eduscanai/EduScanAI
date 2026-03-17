@@ -7,9 +7,7 @@
     </div>
 
     <!-- Loading -->
-    <div v-if="loadingPage" class="py-12 text-center">
-      <p class="text-body text-text-secondary">Carregando configurações...</p>
-    </div>
+    <Carregando v-if="loadingPage" texto="Carregando configurações..." />
 
     <div v-else class="grid grid-cols-1 lg:grid-cols-3 gap-6">
       <!-- Formulário principal -->
@@ -253,7 +251,7 @@ const formatarData = (data: string | undefined) => {
 const fetchAnoLetivo = async () => {
   if (!usuario.value.schoolId) return
   const { data } = await supabase
-    .from('academic_years')
+    .from('anos_letivos')
     .select('name')
     .eq('school_id', usuario.value.schoolId)
     .eq('is_active', true)

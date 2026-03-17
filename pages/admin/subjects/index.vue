@@ -24,13 +24,13 @@
 
     <!-- Tabela -->
     <Cartao>
-      <div v-if="loading" class="py-12 text-center">
-        <p class="text-body text-text-secondary">Carregando disciplinas...</p>
-      </div>
+      <Carregando v-if="loading" texto="Carregando disciplinas..." />
 
       <TabelaDados v-else :colunas="colunas" :dados="subjects">
         <template #celula-name="{ linha }">
-          <p class="font-semibold text-gray-900">{{ linha.name }}</p>
+          <NuxtLink :to="`/admin/subjects/${linha.id}`" class="font-semibold text-gray-900 hover:text-primary-500 no-underline transition-colors">
+            {{ linha.name }}
+          </NuxtLink>
         </template>
 
         <template #celula-code="{ valor }">

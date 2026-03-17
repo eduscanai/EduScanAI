@@ -17,6 +17,12 @@
     <!-- Filtros -->
     <Cartao class="mb-6">
       <div class="flex flex-col sm:flex-row gap-4">
+        <div class="flex-1">
+          <BarraBusca
+            v-model="termoBusca"
+            texto-reservado="Buscar atividade..."
+          />
+        </div>
         <div class="w-full sm:w-56">
           <CampoSelecao
             :modelValue="filtroTurma"
@@ -38,23 +44,25 @@
 
     <!-- Lista -->
     <Cartao>
-      <div v-if="loading" class="py-12 text-center">
-        <p class="text-body text-text-secondary">Carregando atividades...</p>
-      </div>
+      <Carregando v-if="loading" texto="Carregando atividades..." />
 
-      <TabelaDados v-else :colunas="colunas" :dados="assignments">
-        <template #celula-title="{ linha }">
+      <TabelaDados v-else :colunas="colunas" :dados="assignmentsPaginados">
+        <template #celula-titulo="{ linha }">
           <NuxtLink
             :to="`/teacher/assignments/${linha.id}`"
             class="font-semibold text-primary-500 hover:text-primary-600 no-underline"
           >
-            {{ linha.title }}
+            {{ linha.titulo }}
           </NuxtLink>
-          <p class="text-xs text-gray-500 mt-0.5">{{ linha.classes?.name }}</p>
+          <p class="text-xs text-gray-500 mt-0.5">{{ linha.turmas?.name }}</p>
         </template>
 
-        <template #celula-subject="{ linha }">
-          {{ linha.subjects?.name || '-' }}
+        <template #celula-disciplina="{ linha }">
+          {{ linha.disciplinas?.name || '-' }}
+        </template>
+
+        <template #celula-nota_maxima="{ linha }">
+          <span class="font-medium">{{ linha.nota_maxima }}</span>
         </template>
 
         <template #celula-status="{ linha }">
@@ -63,9 +71,18 @@
           </span>
         </template>
 
-        <template #celula-due_date="{ linha }">
-          <span v-if="linha.due_date" :class="{ 'text-critical-500 font-medium': estaVencida(linha.due_date) && linha.status === 'published' }">
-            {{ formatarData(linha.due_date) }}
+        <template #celula-visibilidade="{ linha }">
+          <span :class="[
+            'inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium',
+            linha.visivel_aluno ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-500'
+          ]">
+            {{ linha.visivel_aluno ? 'Visivel' : 'Oculta' }}
+          </span>
+        </template>
+
+        <template #celula-data_entrega="{ linha }">
+          <span v-if="linha.data_entrega" :class="{ 'text-critical-500 font-medium': estaVencida(linha.data_entrega) && linha.status === 'published' }">
+            {{ formatarData(linha.data_entrega) }}
           </span>
           <span v-else class="text-gray-400">Sem prazo</span>
         </template>
@@ -84,10 +101,15 @@
             <button
               v-if="linha.status === 'draft'"
               @click="publicar(linha)"
-              class="p-1.5 rounded-lg text-gray-400 hover:text-green-600 hover:bg-green-50 transition-colors"
+              :disabled="acaoId === linha.id"
+              class="p-1.5 rounded-lg text-gray-400 hover:text-green-600 hover:bg-green-50 transition-colors disabled:opacity-50"
               title="Publicar"
             >
-              <Icone :tamanho="18">
+              <svg v-if="acaoId === linha.id" class="animate-spin h-[18px] w-[18px]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+              </svg>
+              <Icone v-else :tamanho="18">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
               </Icone>
             </button>
@@ -113,13 +135,51 @@
           </div>
         </template>
       </TabelaDados>
+
+      <!-- Paginação -->
+      <div v-if="!loading && totalPaginas > 1" class="flex items-center justify-between pt-4 border-t border-gray-100 mt-4">
+        <p class="text-sm text-text-secondary">
+          Mostrando {{ inicioItem }}–{{ fimItem }} de {{ assignmentsFiltrados.length }}
+        </p>
+        <div class="flex items-center gap-1">
+          <button
+            @click="paginaAtual = paginaAtual - 1"
+            :disabled="paginaAtual === 1"
+            class="p-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-100"
+          >
+            <Icone :tamanho="16">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+            </Icone>
+          </button>
+          <button
+            v-for="pg in paginasVisiveis"
+            :key="pg"
+            @click="paginaAtual = pg"
+            :class="[
+              'w-8 h-8 rounded-lg text-sm font-medium transition-colors',
+              pg === paginaAtual ? 'bg-primary-500 text-white' : 'hover:bg-gray-100 text-text-secondary'
+            ]"
+          >
+            {{ pg }}
+          </button>
+          <button
+            @click="paginaAtual = paginaAtual + 1"
+            :disabled="paginaAtual === totalPaginas"
+            class="p-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-100"
+          >
+            <Icone :tamanho="16">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+            </Icone>
+          </button>
+        </div>
+      </div>
     </Cartao>
 
     <!-- Diálogo -->
     <DialogoConfirmacao
       :esta-aberto="dialogoExcluir"
       titulo="Excluir atividade"
-      :mensagem="`Tem certeza que deseja excluir '${atividadeParaExcluir?.title}'?`"
+      :mensagem="`Tem certeza que deseja excluir '${atividadeParaExcluir?.titulo}'?`"
       variante="perigo"
       texto-confirmar="Excluir"
       @confirmar="executarExclusao"
@@ -144,6 +204,7 @@ import CampoSelecao from '~/components/form/CampoSelecao/CampoSelecao.vue'
 import TabelaDados from '~/components/data/TabelaDados/TabelaDados.vue'
 import DialogoConfirmacao from '~/components/feedback/DialogoConfirmacao/DialogoConfirmacao.vue'
 import Notificacao from '~/components/feedback/Notificacao/Notificacao.vue'
+import BarraBusca from '~/components/form/BarraBusca/BarraBusca.vue'
 
 definePageMeta({
   layout: 'dashboard',
@@ -157,6 +218,9 @@ const { classes, fetchClasses } = useClasses()
 
 const filtroTurma = ref('')
 const filtroStatus = ref('')
+const termoBusca = ref('')
+const paginaAtual = ref(1)
+const itensPorPagina = 10
 
 const opcoesTurma = computed(() => [
   { rotulo: 'Todas as turmas', valor: '' },
@@ -171,27 +235,67 @@ const opcoesStatus = [
 ]
 
 const colunas = [
-  { chave: 'title', rotulo: 'Atividade' },
-  { chave: 'subject', rotulo: 'Disciplina' },
+  { chave: 'titulo', rotulo: 'Atividade' },
+  { chave: 'disciplina', rotulo: 'Disciplina' },
+  { chave: 'nota_maxima', rotulo: 'Valor' },
   { chave: 'status', rotulo: 'Status' },
-  { chave: 'due_date', rotulo: 'Prazo' },
+  { chave: 'visibilidade', rotulo: 'Visibilidade' },
+  { chave: 'data_entrega', rotulo: 'Prazo' },
   { chave: 'acoes', rotulo: '', alinhamento: 'direita' as const }
 ]
 
+// Busca + Paginação
+const assignmentsFiltrados = computed(() => {
+  if (!termoBusca.value.trim()) return assignments.value
+  const termo = termoBusca.value.toLowerCase().trim()
+  return assignments.value.filter(a =>
+    a.titulo.toLowerCase().includes(termo) ||
+    (a as any).turmas?.name?.toLowerCase().includes(termo) ||
+    (a as any).disciplinas?.name?.toLowerCase().includes(termo)
+  )
+})
+
+const totalPaginas = computed(() => Math.ceil(assignmentsFiltrados.value.length / itensPorPagina))
+
+const assignmentsPaginados = computed(() => {
+  const inicio = (paginaAtual.value - 1) * itensPorPagina
+  return assignmentsFiltrados.value.slice(inicio, inicio + itensPorPagina)
+})
+
+const inicioItem = computed(() => Math.min((paginaAtual.value - 1) * itensPorPagina + 1, assignmentsFiltrados.value.length))
+const fimItem = computed(() => Math.min(paginaAtual.value * itensPorPagina, assignmentsFiltrados.value.length))
+
+const paginasVisiveis = computed(() => {
+  const total = totalPaginas.value
+  const atual = paginaAtual.value
+  if (total <= 5) return Array.from({ length: total }, (_, i) => i + 1)
+  if (atual <= 3) return [1, 2, 3, 4, 5]
+  if (atual >= total - 2) return [total - 4, total - 3, total - 2, total - 1, total]
+  return [atual - 2, atual - 1, atual, atual + 1, atual + 2]
+})
+
 const carregarAtividades = () => {
+  paginaAtual.value = 1
   listAssignments(filtroTurma.value || undefined, filtroStatus.value || undefined)
 }
 
 watch([filtroTurma, filtroStatus], carregarAtividades)
+watch(termoBusca, () => { paginaAtual.value = 1 })
+
+// Ação em andamento (rastreia qual item está processando)
+const acaoId = ref<string | null>(null)
 
 // Publicar
 const publicar = async (atividade: any) => {
+  acaoId.value = atividade.id
   try {
     await publishAssignment(atividade.id)
     mostrarNotificacao('sucesso', 'Atividade publicada! Alunos foram notificados.')
     carregarAtividades()
   } catch {
     mostrarNotificacao('critico', 'Erro ao publicar atividade')
+  } finally {
+    acaoId.value = null
   }
 }
 

@@ -25,9 +25,7 @@
       </button>
     </div>
 
-    <div v-if="loading" class="py-12 text-center">
-      <p class="text-body text-text-secondary">Carregando atividades...</p>
-    </div>
+    <Carregando v-if="loading" texto="Carregando atividades..." />
 
     <!-- Lista de atividades -->
     <div v-else class="space-y-4">
@@ -37,21 +35,21 @@
             <div class="flex items-start justify-between">
               <div class="flex-1">
                 <div class="flex items-center gap-2 mb-1">
-                  <h3 class="text-sm font-semibold text-gray-900">{{ a.title }}</h3>
+                  <h3 class="text-sm font-semibold text-gray-900">{{ a.titulo }}</h3>
                   <span v-if="a._status === 'corrigida'" class="text-xs font-semibold text-green-600 bg-green-50 px-2 py-0.5 rounded-full">
-                    {{ a._score }}/{{ a.max_score }}
+                    {{ a._score }}/{{ a.nota_maxima }}
                   </span>
                   <span v-else-if="a._status === 'entregue'" class="text-xs font-medium text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
                     Entregue
                   </span>
                 </div>
                 <p class="text-xs text-gray-500">
-                  {{ a.classes?.name }}{{ a.subjects?.name ? ' · ' + a.subjects.name : '' }}
+                  {{ a.turmas?.name }}{{ a.disciplinas?.name ? ' · ' + a.disciplinas.name : '' }}
                 </p>
               </div>
               <div class="text-right">
-                <p v-if="a.due_date" :class="['text-xs font-medium', estaVencida(a.due_date) && a._status === 'pendente' ? 'text-critical-500' : 'text-gray-500']">
-                  {{ estaVencida(a.due_date) && a._status === 'pendente' ? 'Atrasada' : 'Prazo' }}: {{ formatarData(a.due_date) }}
+                <p v-if="a.data_entrega" :class="['text-xs font-medium', estaVencida(a.data_entrega) && a._status === 'pendente' ? 'text-critical-500' : 'text-gray-500']">
+                  {{ estaVencida(a.data_entrega) && a._status === 'pendente' ? 'Atrasada' : 'Prazo' }}: {{ formatarData(a.data_entrega) }}
                 </p>
                 <p v-else class="text-xs text-gray-400">Sem prazo</p>
               </div>
@@ -96,9 +94,9 @@ const atividadesEnriquecidas = computed(() =>
     const sub = minhasSubmissoes.value[a.id]
     let _status = 'pendente'
     let _score = null
-    if (sub?.graded_at) {
+    if (sub?.corrigido_em) {
       _status = 'corrigida'
-      _score = sub.score
+      _score = sub.nota
     } else if (sub) {
       _status = 'entregue'
     }
@@ -127,13 +125,13 @@ onMounted(async () => {
   // Buscar minhas submissões
   if (user.value) {
     const { data } = await supabase
-      .from('submissions')
-      .select('assignment_id, score, graded_at, submitted_at')
-      .eq('student_id', user.value.id)
+      .from('envios')
+      .select('atividade_id, nota, corrigido_em, enviado_em')
+      .eq('aluno_id', user.value.id)
 
     if (data) {
       for (const sub of data) {
-        minhasSubmissoes.value[sub.assignment_id] = sub
+        minhasSubmissoes.value[sub.atividade_id] = sub
       }
     }
   }

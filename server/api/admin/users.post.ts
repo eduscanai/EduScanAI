@@ -71,7 +71,7 @@ export default defineEventHandler(async (event) => {
   // Garantir que o profile existe com os dados corretos
   const userId = authData.user.id
   const { error: profileError } = await client
-    .from('profiles')
+    .from('perfis')
     .upsert({
       id: userId,
       school_id,

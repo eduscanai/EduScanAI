@@ -17,9 +17,7 @@
       </NuxtLink>
     </div>
 
-    <div v-if="loading" class="py-12 text-center">
-      <p class="text-body text-text-secondary">Carregando avisos...</p>
-    </div>
+    <Carregando v-if="loading" texto="Carregando avisos..." />
 
     <div v-else class="space-y-4">
       <div v-for="aviso in announcements" :key="aviso.id">

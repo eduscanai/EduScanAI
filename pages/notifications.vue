@@ -14,9 +14,7 @@
       </button>
     </div>
 
-    <div v-if="loading" class="py-12 text-center">
-      <p class="text-body text-text-secondary">Carregando...</p>
-    </div>
+    <Carregando v-if="loading" texto="Carregando..." />
 
     <div v-else class="space-y-2">
       <div

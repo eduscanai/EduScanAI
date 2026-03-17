@@ -27,7 +27,7 @@ export const useCalendarEvents = () => {
     error.value = null
     try {
       const { data, error: err } = await supabase
-        .from('calendar_events')
+        .from('eventos_calendario')
         .select('*')
         .eq('school_id', usuario.value.schoolId)
         .gte('start_at', startDate)
@@ -47,8 +47,8 @@ export const useCalendarEvents = () => {
   const fetchAssignmentsDueDates = async (startDate: string, endDate: string) => {
     try {
       const { data, error: err } = await supabase
-        .from('assignments')
-        .select('id, title, due_date, status, classes(name), subjects(name)')
+        .from('atividades')
+        .select('id, title, due_date, status, turmas(name), disciplinas(name)')
         .eq('school_id', usuario.value.schoolId)
         .not('due_date', 'is', null)
         .gte('due_date', startDate)
@@ -63,8 +63,8 @@ export const useCalendarEvents = () => {
   const fetchAnnouncementsDates = async (startDate: string, endDate: string) => {
     try {
       const { data, error: err } = await supabase
-        .from('announcements')
-        .select('id, title, priority, published_at, target_type, profiles(full_name)')
+        .from('comunicados')
+        .select('id, title, priority, published_at, target_type, perfis(full_name)')
         .eq('school_id', usuario.value.schoolId)
         .not('published_at', 'is', null)
         .gte('published_at', startDate)
@@ -90,7 +90,7 @@ export const useCalendarEvents = () => {
     error.value = null
     try {
       const { data: result, error: err } = await supabase
-        .from('calendar_events')
+        .from('eventos_calendario')
         .insert({
           ...data,
           school_id: usuario.value.schoolId,
@@ -113,7 +113,7 @@ export const useCalendarEvents = () => {
     error.value = null
     try {
       const { data: result, error: err } = await supabase
-        .from('calendar_events')
+        .from('eventos_calendario')
         .update({ ...data, updated_at: new Date().toISOString() })
         .eq('id', id)
         .select()
@@ -133,7 +133,7 @@ export const useCalendarEvents = () => {
     error.value = null
     try {
       const { error: err } = await supabase
-        .from('calendar_events')
+        .from('eventos_calendario')
         .delete()
         .eq('id', id)
       if (err) throw err

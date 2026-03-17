@@ -28,8 +28,8 @@ export const useAnnouncements = () => {
     error.value = null
     try {
       let query = supabase
-        .from('announcements')
-        .select('*, profiles(full_name, avatar_url)')
+        .from('comunicados')
+        .select('*, perfis(full_name, avatar_url)')
         .eq('school_id', usuario.value.schoolId)
         .order('created_at', { ascending: false })
 
@@ -52,8 +52,8 @@ export const useAnnouncements = () => {
     loading.value = true
     try {
       const { data, error: err } = await supabase
-        .from('announcements')
-        .select('*, profiles(full_name, avatar_url)')
+        .from('comunicados')
+        .select('*, perfis(full_name, avatar_url)')
         .eq('id', id)
         .eq('school_id', usuario.value.schoolId)
         .single()
@@ -82,7 +82,7 @@ export const useAnnouncements = () => {
     error.value = null
     try {
       const { data: result, error: err } = await supabase
-        .from('announcements')
+        .from('comunicados')
         .insert({
           school_id: usuario.value.schoolId,
           author_id: session.user.id,
@@ -94,7 +94,7 @@ export const useAnnouncements = () => {
           priority: data.priority || 'normal',
           published_at: data.publish ? new Date().toISOString() : null
         })
-        .select('*, profiles(full_name, avatar_url)')
+        .select('*, perfis(full_name, avatar_url)')
         .single()
       if (err) throw err
       return result as Announcement
@@ -111,11 +111,11 @@ export const useAnnouncements = () => {
     error.value = null
     try {
       const { data: result, error: err } = await supabase
-        .from('announcements')
+        .from('comunicados')
         .update(data)
         .eq('id', id)
         .eq('school_id', usuario.value.schoolId)
-        .select('*, profiles(full_name, avatar_url)')
+        .select('*, perfis(full_name, avatar_url)')
         .single()
       if (err) throw err
       return result as Announcement
@@ -138,7 +138,7 @@ export const useAnnouncements = () => {
     error.value = null
     try {
       const { error: err } = await supabase
-        .from('announcements')
+        .from('comunicados')
         .delete()
         .eq('id', id)
         .eq('school_id', usuario.value.schoolId)

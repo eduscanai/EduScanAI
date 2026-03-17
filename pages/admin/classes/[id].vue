@@ -20,9 +20,7 @@
     </div>
 
     <!-- Loading -->
-    <div v-if="carregando" class="py-12 text-center">
-      <p class="text-body text-text-secondary">Carregando turma...</p>
-    </div>
+    <Carregando v-if="carregando" texto="Carregando turma..." />
 
     <div v-else-if="turma">
       <!-- Tabs -->

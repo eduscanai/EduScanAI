@@ -78,12 +78,12 @@
 
         <Cartao>
           <div class="space-y-3">
-            <button @click="salvarRascunho" :disabled="loading" class="btn-outline w-full">
-              {{ loading ? 'Salvando...' : 'Salvar Rascunho' }}
-            </button>
-            <button @click="publicar" :disabled="loading" class="btn-primary w-full">
-              {{ loading ? 'Publicando...' : 'Publicar Aviso' }}
-            </button>
+            <Botao variante="contorno" largura-completa :carregando="salvandoRascunho" @click="salvarRascunho">
+              Salvar Rascunho
+            </Botao>
+            <Botao variante="primario" largura-completa :carregando="publicando" @click="publicar">
+              Publicar Aviso
+            </Botao>
           </div>
         </Cartao>
       </div>
@@ -101,6 +101,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import Icone from '~/components/ui/Icone/Icone.vue'
+import Botao from '~/components/ui/Botao/Botao.vue'
 import Cartao from '~/components/layout/Cartao/Cartao.vue'
 import CampoSelecao from '~/components/form/CampoSelecao/CampoSelecao.vue'
 import EditorRico from '~/components/form/EditorRico/EditorRico.vue'
@@ -112,7 +113,9 @@ definePageMeta({
   requiredRole: ['admin', 'pedagogue', 'teacher']
 })
 
-const { loading, createAnnouncement } = useAnnouncements()
+const { createAnnouncement } = useAnnouncements()
+const salvandoRascunho = ref(false)
+const publicando = ref(false)
 const { classes, fetchClasses } = useClasses()
 
 const form = ref({
@@ -159,6 +162,7 @@ const validar = () => {
 
 const salvarRascunho = async () => {
   if (!validar()) return
+  salvandoRascunho.value = true
   try {
     const result = await createAnnouncement({
       title: form.value.title,
@@ -172,13 +176,15 @@ const salvarRascunho = async () => {
     mostrarNotificacao('sucesso', 'Rascunho salvo!')
     setTimeout(() => navigateTo(`/announcements/${result?.id}`), 1000)
   } catch (e: any) {
-    console.error('Erro ao salvar rascunho:', e)
     mostrarNotificacao('critico', e.message || 'Erro ao salvar rascunho')
+  } finally {
+    salvandoRascunho.value = false
   }
 }
 
 const publicar = async () => {
   if (!validar()) return
+  publicando.value = true
   try {
     await createAnnouncement({
       title: form.value.title,
@@ -192,8 +198,9 @@ const publicar = async () => {
     mostrarNotificacao('sucesso', 'Aviso publicado!')
     setTimeout(() => navigateTo('/announcements'), 1500)
   } catch (e: any) {
-    console.error('Erro ao publicar aviso:', e)
     mostrarNotificacao('critico', e.message || 'Erro ao publicar aviso')
+  } finally {
+    publicando.value = false
   }
 }
 

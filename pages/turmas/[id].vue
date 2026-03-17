@@ -1,9 +1,7 @@
 <template>
   <div>
     <!-- Loading -->
-    <div v-if="loadingPage" class="py-12 text-center">
-      <p class="text-sm text-gray-500">Carregando turma...</p>
-    </div>
+    <Carregando v-if="loadingPage" texto="Carregando turma..." />
 
     <!-- Not found -->
     <div v-else-if="!turmaData" class="py-12 text-center">

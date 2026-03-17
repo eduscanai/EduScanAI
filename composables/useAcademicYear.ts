@@ -21,7 +21,7 @@ export const useAcademicYear = () => {
     error.value = null
     try {
       const { data, error: err } = await supabase
-        .from('academic_years')
+        .from('anos_letivos')
         .select('*')
         .eq('school_id', usuario.value.schoolId)
         .order('start_date', { ascending: false })
@@ -40,7 +40,7 @@ export const useAcademicYear = () => {
     error.value = null
     try {
       const { data, error: err } = await supabase
-        .from('academic_years')
+        .from('anos_letivos')
         .insert({ ...year, school_id: usuario.value.schoolId })
         .select()
         .single()
@@ -59,7 +59,7 @@ export const useAcademicYear = () => {
     error.value = null
     try {
       const { data, error: err } = await supabase
-        .from('academic_years')
+        .from('anos_letivos')
         .update(updates)
         .eq('id', id)
         .eq('school_id', usuario.value.schoolId)
@@ -80,7 +80,7 @@ export const useAcademicYear = () => {
     error.value = null
     try {
       const { error: err } = await supabase
-        .from('academic_years')
+        .from('anos_letivos')
         .delete()
         .eq('id', id)
         .eq('school_id', usuario.value.schoolId)

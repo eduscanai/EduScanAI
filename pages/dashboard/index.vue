@@ -49,9 +49,7 @@
         <Cartao class="lg:col-span-2">
           <h2 class="text-heading-2 mb-6">Painel da Escola</h2>
 
-          <div v-if="loadingSchool" class="py-4 text-center">
-            <p class="text-sm text-gray-500">Carregando informações...</p>
-          </div>
+          <Carregando v-if="loadingSchool" texto="Carregando informações..." classe="py-4" />
 
           <div v-else class="grid grid-cols-1 md:grid-cols-3 gap-6">
             <!-- Informações Gerais -->
@@ -292,9 +290,7 @@
               <ClientOnly v-else>
                 <GraficoPerformance :dados="dadosPerformance" />
                 <template #fallback>
-                  <div class="w-full h-64 flex items-center justify-center bg-gray-50 rounded-lg">
-                    <p class="text-gray-500 text-sm">Carregando gráfico...</p>
-                  </div>
+                  <Carregando texto="Carregando gráfico..." classe="w-full h-64 bg-gray-50 rounded-lg" />
                 </template>
               </ClientOnly>
             </template>
@@ -489,7 +485,7 @@ const opcoesDisciplina = computed(() =>
 const fetchAnoLetivo = async () => {
   if (!usuario.value.schoolId) return
   const { data } = await supabase
-    .from('academic_years')
+    .from('anos_letivos')
     .select('name')
     .eq('school_id', usuario.value.schoolId)
     .eq('is_current', true)
@@ -503,7 +499,7 @@ const fetchTurmasComAlunos = async () => {
   if (classIds.length === 0) return []
 
   const { data: allStudents } = await supabase
-    .from('class_students')
+    .from('turma_alunos')
     .select('class_id')
     .in('class_id', classIds)
 
@@ -568,8 +564,8 @@ const initTeacher = async () => {
   let disciplinasPorTurma = new Map<string, string[]>()
   if (classIds.length > 0 && usuario.value.id) {
     const { data: ctData } = await supabase
-      .from('class_teachers')
-      .select('class_id, subjects(name)')
+      .from('turma_professores')
+      .select('class_id, disciplinas(name)')
       .eq('teacher_id', usuario.value.id)
       .in('class_id', classIds)
     ctData?.forEach((ct: any) => {
@@ -619,7 +615,7 @@ const initStudent = async () => {
   let countMap = new Map<string, number>()
   if (classIds.length > 0) {
     const { data: allStudents } = await supabase
-      .from('class_students')
+      .from('turma_alunos')
       .select('class_id')
       .in('class_id', classIds)
     allStudents?.forEach((s: any) => {
@@ -637,13 +633,13 @@ const initStudent = async () => {
   // Buscar disciplinas vinculadas à turma do aluno (via class_teachers)
   if (classIds.length > 0) {
     const { data: ctData } = await supabase
-      .from('class_teachers')
+      .from('turma_professores')
       .select('subject_id')
       .in('class_id', classIds)
     const subjectIds = [...new Set((ctData || []).map((ct: any) => ct.subject_id).filter(Boolean))]
     if (subjectIds.length > 0) {
       const { data: subData } = await supabase
-        .from('subjects')
+        .from('disciplinas')
         .select('id, school_id, name, code')
         .in('id', subjectIds)
         .order('name')

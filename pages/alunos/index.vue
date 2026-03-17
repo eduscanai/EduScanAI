@@ -46,9 +46,7 @@
         </div>
 
         <!-- Loading -->
-        <div v-if="loadingAlunos" class="py-12 text-center">
-          <p class="text-sm text-gray-500">Carregando alunos...</p>
-        </div>
+        <Carregando v-if="loadingAlunos" texto="Carregando alunos..." />
 
         <!-- TABELA DE ALUNOS -->
         <div v-else class="bg-white border border-gray-200 rounded-xl overflow-hidden">

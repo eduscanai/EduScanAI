@@ -49,9 +49,7 @@
       <ClientOnly>
         <FullCalendar ref="calendarRef" :options="calendarOptions" />
         <template #fallback>
-          <div class="py-12 text-center">
-            <p class="text-body text-text-secondary">Carregando calendário...</p>
-          </div>
+          <Carregando texto="Carregando calendário..." />
         </template>
       </ClientOnly>
     </Cartao>

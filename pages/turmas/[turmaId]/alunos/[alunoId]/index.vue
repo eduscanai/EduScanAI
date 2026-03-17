@@ -1,9 +1,7 @@
 <template>
   <div>
         <!-- Loading -->
-        <div v-if="loadingPage" class="py-12 text-center">
-          <p class="text-sm text-gray-500">Carregando perfil do aluno...</p>
-        </div>
+        <Carregando v-if="loadingPage" texto="Carregando perfil do aluno..." />
 
         <template v-else-if="alunoData">
         <!-- Header do Aluno -->
@@ -63,9 +61,7 @@
             <ClientOnly v-else>
               <GraficoPerformance :dados="dadosPerformance" />
               <template #fallback>
-                <div class="w-full h-64 flex items-center justify-center bg-gray-50 rounded-lg">
-                  <p class="text-gray-500">Carregando gráfico...</p>
-                </div>
+                <Carregando texto="Carregando gráfico..." classe="w-full h-64 bg-gray-50 rounded-lg" />
               </template>
             </ClientOnly>
           </div>
@@ -94,9 +90,7 @@
                 <canvas ref="radarRef"></canvas>
               </div>
               <template #fallback>
-                <div class="w-full h-64 flex items-center justify-center bg-gray-50 rounded-lg">
-                  <p class="text-gray-500">Carregando gráfico...</p>
-                </div>
+                <Carregando texto="Carregando gráfico..." classe="w-full h-64 bg-gray-50 rounded-lg" />
               </template>
             </ClientOnly>
           </div>
@@ -420,15 +414,15 @@ onMounted(async () => {
 
   // Fetch submissions for this student in this class's assignments
   const { data: classAssignments } = await supabase
-    .from('assignments')
+    .from('atividades')
     .select('id')
     .eq('class_id', turmaId)
 
   if (classAssignments && classAssignments.length > 0) {
     const assignmentIds = classAssignments.map((a: any) => a.id)
     const { data: subs } = await supabase
-      .from('submissions')
-      .select('*, assignments(id, title, max_score, subject_id, subjects(id, name))')
+      .from('envios')
+      .select('*, atividades(id, title, max_score, subject_id, disciplinas(id, name))')
       .eq('student_id', alunoId)
       .in('assignment_id', assignmentIds)
       .not('score', 'is', null)

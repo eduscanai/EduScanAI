@@ -17,9 +17,7 @@
     </div>
 
     <!-- Loading -->
-    <div v-if="loadingUser" class="py-12 text-center">
-      <p class="text-body text-text-secondary">Carregando dados do usuário...</p>
-    </div>
+    <Carregando v-if="loadingUser" texto="Carregando dados do usuário..." />
 
     <!-- Formulário -->
     <div v-else-if="form" class="grid grid-cols-1 lg:grid-cols-3 gap-6">

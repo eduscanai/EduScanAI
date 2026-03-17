@@ -100,7 +100,7 @@ export default defineEventHandler(async (event) => {
         }
 
         const { error: profileError } = await client
-          .from('profiles')
+          .from('perfis')
           .upsert(profileData, { onConflict: 'id' })
 
         if (profileError) {

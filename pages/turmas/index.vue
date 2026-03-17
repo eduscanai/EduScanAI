@@ -42,9 +42,7 @@
         </div>
 
         <!-- Loading -->
-        <div v-if="loadingTurmas" class="py-12 text-center">
-          <p class="text-sm text-gray-500">Carregando turmas...</p>
-        </div>
+        <Carregando v-if="loadingTurmas" texto="Carregando turmas..." />
 
         <!-- Empty state -->
         <div v-else-if="turmasFormatadas.length === 0" class="py-12 text-center">
@@ -115,13 +113,8 @@
         <Botao variante="contorno" @click="fecharModal">
           Cancelar
         </Botao>
-        <Botao variante="primario" @click="criarTurma" :desabilitado="criandoTurma">
-          <template #icone-esquerda>
-            <Icone :tamanho="16">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-            </Icone>
-          </template>
-          {{ criandoTurma ? 'Criando...' : 'Criar Turma' }}
+        <Botao variante="primario" @click="criarTurma" :carregando="criandoTurma">
+          Criar Turma
         </Botao>
       </template>
     </Modal>
@@ -160,7 +153,7 @@ const fetchStudentCounts = async () => {
   if (classIds.length === 0) { studentCounts.value = {}; return }
 
   const { data: allStudents } = await supabase
-    .from('class_students')
+    .from('turma_alunos')
     .select('class_id')
     .in('class_id', classIds)
 

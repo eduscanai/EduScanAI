@@ -1,4 +1,4 @@
-import { serverSupabaseUser, serverSupabaseClient } from '#supabase/server'
+import { serverSupabaseUser, serverSupabaseServiceRole } from '#supabase/server'
 import type { H3Event } from 'h3'
 
 interface AuthResult {
@@ -12,18 +12,27 @@ export const requireAuth = async (event: H3Event): Promise<AuthResult> => {
     throw createError({ statusCode: 401, message: 'Não autenticado' })
   }
 
-  const client = await serverSupabaseClient(event)
+  // serverSupabaseUser pode retornar o JWT payload (sub/email) ou User object (id/email)
+  const userId = (user as any).id || (user as any).sub
+  const userEmail = (user as any).email
+
+  if (!userId) {
+    throw createError({ statusCode: 401, message: 'ID do usuário não encontrado na sessão' })
+  }
+
+  // Usa service role para buscar perfil (bypassa RLS)
+  const client = await serverSupabaseServiceRole(event)
   const { data: profile, error } = await client
-    .from('profiles')
+    .from('perfis')
     .select('id, school_id, role')
-    .eq('id', user.id)
+    .eq('id', userId)
     .single()
 
   if (error || !profile) {
     throw createError({ statusCode: 403, message: 'Perfil não encontrado' })
   }
 
-  return { user: { id: user.id, email: user.email }, profile }
+  return { user: { id: userId, email: userEmail }, profile }
 }
 
 export const requireAdmin = async (event: H3Event): Promise<AuthResult> => {

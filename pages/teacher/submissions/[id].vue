@@ -18,9 +18,7 @@
       </div>
     </div>
 
-    <div v-if="carregando" class="py-12 text-center">
-      <p class="text-body text-text-secondary">Carregando...</p>
-    </div>
+    <Carregando v-if="carregando" texto="Carregando..." />
 
     <div v-else-if="submissao" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
       <!-- Conteúdo da submissão -->
@@ -101,10 +99,14 @@
 
             <button
               @click="salvarCorrecao"
-              :disabled="loading"
-              class="btn-primary w-full"
+              :disabled="salvando"
+              class="btn-primary w-full flex items-center justify-center gap-2 disabled:opacity-50"
             >
-              {{ loading ? 'Salvando...' : (submissao.graded_at ? 'Atualizar Nota' : 'Salvar Correção') }}
+              <svg v-if="salvando" class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+              </svg>
+              {{ salvando ? 'Salvando...' : (submissao.graded_at ? 'Atualizar Nota' : 'Salvar Correção') }}
             </button>
           </div>
 
@@ -160,7 +162,8 @@ const route = useRoute()
 const router = useRouter()
 const submissionId = route.params.id as string
 
-const { loading, getSubmission, gradeSubmission } = useSubmissions()
+const { getSubmission, gradeSubmission } = useSubmissions()
+const salvando = ref(false)
 const { getAssignment } = useAssignments()
 
 const carregando = ref(true)
@@ -189,11 +192,14 @@ const salvarCorrecao = async () => {
     return
   }
 
+  salvando.value = true
   try {
     submissao.value = await gradeSubmission(submissionId, formNota.value.score, formNota.value.feedback)
     mostrarNotificacao('sucesso', 'Correção salva com sucesso!')
   } catch {
     mostrarNotificacao('critico', 'Erro ao salvar correção')
+  } finally {
+    salvando.value = false
   }
 }
 
