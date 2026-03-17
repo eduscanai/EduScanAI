@@ -34,9 +34,10 @@
 
             <EditorRico
               v-model="form.descricao"
-              rotulo="Descricao"
+              rotulo="Descricao *"
               texto-reservado="Descreva a atividade, instrucoes, criterios de avaliacao..."
             />
+            <p v-if="erros.descricao" class="mt-1 text-xs text-critical-500">{{ erros.descricao }}</p>
           </div>
         </Cartao>
 
@@ -50,20 +51,22 @@
           <div class="space-y-5">
             <UploadArquivo
               v-model="form.anexos"
-              rotulo="PDF da Atividade"
+              rotulo="PDF da Atividade *"
               bucket="assignments-files"
               :pasta="form.turma_ids[0] || undefined"
             />
+            <p v-if="erros.anexos" class="mt-1 text-xs text-critical-500">{{ erros.anexos }}</p>
 
             <div class="border-t border-gray-100 pt-5">
               <UploadArquivo
                 v-model="form.gabarito"
-                rotulo="Gabarito (para correcao com IA)"
+                rotulo="Gabarito *"
                 bucket="assignments-files"
                 :pasta="form.turma_ids[0] ? `${form.turma_ids[0]}/gabaritos` : undefined"
               />
+              <p v-if="erros.gabarito" class="mt-1 text-xs text-critical-500">{{ erros.gabarito }}</p>
               <p class="mt-2 text-xs text-text-secondary">
-                Faca upload do gabarito para habilitar a correcao automatica com IA.
+                Faca upload do gabarito para a correcao automatica com IA.
               </p>
             </div>
           </div>
@@ -147,6 +150,7 @@
             <p v-if="form.habilidade_ids.length > 0" class="text-xs text-primary-600 font-medium">
               {{ form.habilidade_ids.length }} habilidade{{ form.habilidade_ids.length > 1 ? 's' : '' }} selecionada{{ form.habilidade_ids.length > 1 ? 's' : '' }}
             </p>
+            <p v-if="erros.habilidades" class="text-xs text-critical-500">{{ erros.habilidades }}</p>
           </div>
         </Cartao>
 
@@ -171,37 +175,41 @@
 
             <div>
               <CampoSelecao
-                rotulo="Disciplina"
+                rotulo="Disciplina *"
                 :modelValue="form.disciplina_id"
                 @update:modelValue="onSubjectChange($event as string)"
-                texto-reservado="Selecione (opcional)"
+                texto-reservado="Selecione"
                 :opcoes="opcoesDisciplina"
               />
+              <p v-if="erros.disciplina_id" class="mt-1 text-xs text-critical-500">{{ erros.disciplina_id }}</p>
             </div>
 
             <div>
               <CampoSelecao
-                rotulo="Categoria"
+                rotulo="Categoria *"
                 :modelValue="form.categoria_id"
                 @update:modelValue="form.categoria_id = $event as string"
-                texto-reservado="Selecione (opcional)"
+                texto-reservado="Selecione"
                 :opcoes="opcoesCategoria"
               />
+              <p v-if="erros.categoria_id" class="mt-1 text-xs text-critical-500">{{ erros.categoria_id }}</p>
             </div>
 
             <div>
               <CampoSelecao
-                rotulo="Periodo de Avaliacao"
+                rotulo="Periodo de Avaliacao *"
                 :modelValue="form.periodo_id"
                 @update:modelValue="form.periodo_id = $event as string"
-                texto-reservado="Selecione (opcional)"
+                texto-reservado="Selecione"
                 :opcoes="opcoesPeriodo"
               />
+              <p v-if="erros.periodo_id" class="mt-1 text-xs text-critical-500">{{ erros.periodo_id }}</p>
             </div>
 
             <div>
-              <label for="prazo" class="form-label">Prazo de entrega</label>
+              <label for="prazo" class="form-label">Prazo de entrega *</label>
               <input id="prazo" type="datetime-local" v-model="form.data_entrega" class="form-input" />
+              <p v-if="erros.data_entrega" class="mt-1 text-xs text-critical-500">{{ erros.data_entrega }}</p>
             </div>
 
             <div class="grid grid-cols-2 gap-3">
@@ -414,21 +422,42 @@ const onSubjectChange = async (subjectId: string) => {
   }
 }
 
-const validar = () => {
+const validar = async () => {
   erros.value = {}
   if (!form.value.titulo.trim()) erros.value.titulo = 'Titulo e obrigatorio'
+  if (!form.value.descricao.trim() && !form.value.descricao.includes('<p>')) erros.value.descricao = 'Descricao e obrigatoria'
   if (!form.value.turma_ids.length) erros.value.turma_ids = 'Selecione ao menos uma turma'
+  if (!form.value.disciplina_id) erros.value.disciplina_id = 'Disciplina e obrigatoria'
+  if (!form.value.categoria_id) erros.value.categoria_id = 'Categoria e obrigatoria'
+  if (!form.value.periodo_id) erros.value.periodo_id = 'Periodo e obrigatorio'
+  if (!form.value.data_entrega) erros.value.data_entrega = 'Prazo e obrigatorio'
+  if (form.value.anexos.length === 0) erros.value.anexos = 'Anexe o PDF da atividade'
+  if (form.value.gabarito.length === 0) erros.value.gabarito = 'Anexe o gabarito'
+  if (form.value.habilidade_ids.length === 0) erros.value.habilidades = 'Selecione ao menos uma habilidade'
+
+  // Verificar se as turmas selecionadas tem alunos
+  if (form.value.turma_ids.length > 0 && !erros.value.turma_ids) {
+    const supabase = useSupabaseClient()
+    const { count } = await supabase
+      .from('turma_alunos')
+      .select('id', { count: 'exact', head: true })
+      .in('class_id', form.value.turma_ids)
+    if (!count || count === 0) {
+      erros.value.turma_ids = 'As turmas selecionadas nao possuem alunos matriculados'
+    }
+  }
+
   return Object.keys(erros.value).length === 0
 }
 
 const dadosAtividade = () => ({
   titulo: form.value.titulo,
-  descricao: form.value.descricao || undefined,
+  descricao: form.value.descricao,
   turma_ids: form.value.turma_ids,
-  disciplina_id: form.value.disciplina_id || undefined,
-  categoria_id: form.value.categoria_id || undefined,
-  periodo_id: form.value.periodo_id || undefined,
-  data_entrega: form.value.data_entrega || undefined,
+  disciplina_id: form.value.disciplina_id,
+  categoria_id: form.value.categoria_id,
+  periodo_id: form.value.periodo_id,
+  data_entrega: form.value.data_entrega,
   nota_maxima: form.value.nota_maxima,
   peso: form.value.peso,
   modo_envio: form.value.modo_envio,
@@ -444,7 +473,7 @@ const salvarExtras = async (assignmentIds: string[]) => {
 }
 
 const salvarRascunho = async () => {
-  if (!validar()) return
+  if (!(await validar())) return
   salvandoRascunho.value = true
   try {
     const results = await createAssignment(dadosAtividade())
@@ -459,7 +488,7 @@ const salvarRascunho = async () => {
 }
 
 const salvarEPublicar = async () => {
-  if (!validar()) return
+  if (!(await validar())) return
   publicando.value = true
   try {
     const results = await createAssignment(dadosAtividade())
