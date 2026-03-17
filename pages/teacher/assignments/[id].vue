@@ -260,6 +260,63 @@
             </p>
           </div>
         </Cartao>
+
+        <!-- Avaliacao por Habilidade -->
+        <Cartao v-if="habilidadesAtividade.length > 0 && alunosComAvaliacao.length > 0">
+          <h2 class="text-heading-3 mb-4">Avaliacao por Habilidade</h2>
+          <p class="text-xs text-text-secondary mb-4">Resultado da correcao da IA por habilidade BNCC</p>
+
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead>
+                <tr class="border-b border-gray-200">
+                  <th class="text-left py-2 pr-3 text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Aluno</th>
+                  <th
+                    v-for="hab in habilidadesAtividade"
+                    :key="hab.id"
+                    class="text-center py-2 px-2 text-[10px] font-medium text-gray-500 uppercase whitespace-nowrap max-w-[100px]"
+                    :title="hab.bncc_habilidades?.description"
+                  >
+                    {{ hab.bncc_habilidades?.code || 'Hab.' }}
+                  </th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-100">
+                <tr v-for="aluno in alunosComAvaliacao" :key="aluno.id">
+                  <td class="py-2 pr-3 text-sm font-medium text-gray-900 whitespace-nowrap">{{ aluno.nome }}</td>
+                  <td
+                    v-for="hab in habilidadesAtividade"
+                    :key="hab.bncc_habilidades?.id"
+                    class="text-center py-2 px-2"
+                  >
+                    <span
+                      v-if="aluno.avaliacoes[hab.bncc_habilidades?.id]"
+                      :class="['inline-block text-[10px] font-semibold px-2 py-0.5 rounded-full', classeNivel(aluno.avaliacoes[hab.bncc_habilidades?.id])]"
+                      :title="aluno.avaliacoes[hab.bncc_habilidades?.id + '_obs'] || ''"
+                    >
+                      {{ rotuloNivel(aluno.avaliacoes[hab.bncc_habilidades?.id]) }}
+                    </span>
+                    <span v-else class="text-gray-300 text-xs">-</span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Legenda -->
+          <div class="flex items-center gap-4 mt-4 pt-3 border-t border-gray-100">
+            <span class="text-[10px] text-gray-500 uppercase font-medium">Legenda:</span>
+            <span class="inline-flex items-center gap-1 text-[10px]">
+              <span class="w-2 h-2 rounded-full bg-red-500"></span> Insatisfatorio
+            </span>
+            <span class="inline-flex items-center gap-1 text-[10px]">
+              <span class="w-2 h-2 rounded-full bg-amber-500"></span> Regular
+            </span>
+            <span class="inline-flex items-center gap-1 text-[10px]">
+              <span class="w-2 h-2 rounded-full bg-green-500"></span> Satisfatorio
+            </span>
+          </div>
+        </Cartao>
       </div>
 
       <!-- Info lateral -->
@@ -385,7 +442,7 @@ const { canCreateAssignments } = usePermissions()
 const route = useRoute()
 const assignmentId = route.params.id as string
 
-const { getAssignment, updateAssignment, publishAssignment, closeAssignment, toggleVisibilidade, fetchHabilidades } = useAssignments()
+const { getAssignment, updateAssignment, publishAssignment, closeAssignment, toggleVisibilidade, fetchHabilidades, fetchAvaliacoesAtividade } = useAssignments()
 const { submissions: submissoes, getSubmissionsForAssignment, submitLote } = useSubmissions()
 const { fetchClassStudents } = useClasses()
 
@@ -393,6 +450,7 @@ const carregando = ref(true)
 const atividade = ref<any>(null)
 const alunosTurma = ref<any[]>([])
 const habilidadesAtividade = ref<any[]>([])
+const avaliacoesRaw = ref<any[]>([])
 const enviandoLote = ref(false)
 const loteArquivos = ref<{ name: string; url: string }[]>([])
 const editandoGabarito = ref(false)
@@ -424,6 +482,43 @@ const mediaNotas = computed(() => {
   if (notas.length === 0) return null
   return notas.reduce((a, b) => a + b, 0) / notas.length
 })
+
+// Avaliacao por habilidade: montar tabela aluno x habilidade
+const alunosComAvaliacao = computed(() => {
+  if (avaliacoesRaw.value.length === 0) return []
+  // Agrupar avaliacoes por aluno_id
+  const porAluno = new Map<string, Record<string, string>>()
+  for (const av of avaliacoesRaw.value) {
+    const alunoId = av.envios?.aluno_id
+    if (!alunoId) continue
+    if (!porAluno.has(alunoId)) porAluno.set(alunoId, {})
+    const map = porAluno.get(alunoId)!
+    map[av.habilidade_id] = av.nivel
+    if (av.observacao) map[av.habilidade_id + '_obs'] = av.observacao
+  }
+  // Combinar com nomes dos alunos
+  return alunosComStatus.value
+    .filter(a => porAluno.has(a.id))
+    .map(a => ({
+      id: a.id,
+      nome: a.nome,
+      avaliacoes: porAluno.get(a.id) || {}
+    }))
+})
+
+const rotuloNivel = (nivel: string) => ({
+  insatisfatorio: 'I',
+  regular: 'R',
+  satisfatorio: 'S',
+  pendente: '...'
+}[nivel] || '-')
+
+const classeNivel = (nivel: string) => ({
+  insatisfatorio: 'bg-red-100 text-red-700',
+  regular: 'bg-amber-100 text-amber-700',
+  satisfatorio: 'bg-green-100 text-green-700',
+  pendente: 'bg-gray-100 text-gray-500'
+}[nivel] || 'bg-gray-100 text-gray-500')
 
 // Status da atividade: Atrasada / Em andamento / Finalizada
 const rotuloStatusAtividade = computed(() => {
@@ -537,6 +632,9 @@ onMounted(async () => {
 
   try {
     habilidadesAtividade.value = await fetchHabilidades(assignmentId)
+    if (habilidadesAtividade.value.length > 0) {
+      avaliacoesRaw.value = await fetchAvaliacoesAtividade(assignmentId)
+    }
   } catch { /* silenciar */ }
 
   carregando.value = false

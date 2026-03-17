@@ -112,33 +112,29 @@
             <p class="text-sm text-gray-700 whitespace-pre-wrap">{{ minhaSubmissao.comentario }}</p>
           </div>
 
-          <!-- Desempenho por tópico (correção IA) -->
-          <div v-if="correcaoIA && correcaoIA.desempenhos.length > 0" class="mt-4 pt-4 border-t border-gray-200">
-            <h3 class="text-sm font-semibold text-gray-900 mb-3">Desempenho por Tópico</h3>
-            <div class="space-y-3">
+          <!-- Avaliacao por Habilidade -->
+          <div v-if="minhasAvaliacoes.length > 0" class="mt-4 pt-4 border-t border-gray-200">
+            <h3 class="text-sm font-semibold text-gray-900 mb-3">Avaliacao por Habilidade</h3>
+            <div class="space-y-2">
               <div
-                v-for="d in correcaoIA.desempenhos"
-                :key="d.id"
-                class="bg-gray-50 rounded-lg p-3"
+                v-for="av in minhasAvaliacoes"
+                :key="av.id"
+                class="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2"
               >
-                <div class="flex items-center justify-between mb-1">
-                  <p class="text-sm font-medium text-gray-900">{{ d.topicos_atividade?.nome || 'Tópico' }}</p>
-                  <span :class="['text-sm font-bold', corNota(d.percentual)]">
-                    {{ d.acertos }}/{{ d.total }} ({{ d.percentual }}%)
-                  </span>
+                <div class="flex-1 min-w-0">
+                  <span v-if="av.bncc_habilidades?.code" class="text-xs font-mono text-primary-600 mr-1">{{ av.bncc_habilidades.code }}</span>
+                  <span class="text-sm text-gray-700">{{ av.bncc_habilidades?.description }}</span>
                 </div>
-                <div class="w-full bg-gray-200 rounded-full h-1.5 mb-1">
-                  <div
-                    :class="['h-1.5 rounded-full', bgNota(d.percentual)]"
-                    :style="{ width: `${d.percentual}%` }"
-                  />
-                </div>
-                <p v-if="d.observacao_ia" class="text-xs text-gray-500">{{ d.observacao_ia }}</p>
-                <span :class="['inline-block text-[10px] font-medium px-2 py-0.5 rounded-full mt-1', nivelClasse(d.nivel)]">
-                  {{ nivelRotulo(d.nivel) }}
+                <span :class="['ml-3 text-xs font-semibold px-2.5 py-0.5 rounded-full whitespace-nowrap', classeNivelAluno(av.nivel)]">
+                  {{ rotuloNivelAluno(av.nivel) }}
                 </span>
               </div>
             </div>
+            <p v-if="minhasAvaliacoes.some(a => a.observacao)" class="mt-3 text-xs text-gray-500">
+              <span v-for="av in minhasAvaliacoes.filter(a => a.observacao)" :key="av.id" class="block mt-1">
+                <strong>{{ av.bncc_habilidades?.code }}:</strong> {{ av.observacao }}
+              </span>
+            </p>
           </div>
 
           <div v-if="minhaSubmissao.conteudo" class="mt-4 pt-4 border-t border-gray-200">
@@ -206,7 +202,7 @@ definePageMeta({
 const route = useRoute()
 const assignmentId = route.params.id as string
 
-const { getAssignment } = useAssignments()
+const { getAssignment, fetchAvaliacaoHabilidades } = useAssignments()
 const { loading: loadingSub, getMySubmission, submitWork } = useSubmissions()
 const { getCorrecao } = useCorrecoesIA()
 
@@ -214,6 +210,7 @@ const carregando = ref(true)
 const atividade = ref<any>(null)
 const minhaSubmissao = ref<any>(null)
 const correcaoIA = ref<any>(null)
+const minhasAvaliacoes = ref<any[]>([])
 
 const formEntrega = ref({
   conteudo: '',
@@ -255,14 +252,19 @@ const enviarEntrega = async () => {
 }
 
 // Helpers visuais
-const corNota = (p: number) => p >= 70 ? 'text-green-600' : p >= 40 ? 'text-amber-600' : 'text-critical-500'
-const bgNota = (p: number) => p >= 70 ? 'bg-green-500' : p >= 40 ? 'bg-amber-500' : 'bg-critical-500'
-const nivelRotulo = (n: string) => ({ facil: 'Fácil', medio: 'Médio', dificil: 'Difícil' }[n] || n)
-const nivelClasse = (n: string) => ({
-  facil: 'bg-green-100 text-green-700',
-  medio: 'bg-amber-100 text-amber-700',
-  dificil: 'bg-red-100 text-red-700'
-}[n] || 'bg-gray-100 text-gray-700')
+const rotuloNivelAluno = (nivel: string) => ({
+  insatisfatorio: 'Insatisfatorio',
+  regular: 'Regular',
+  satisfatorio: 'Satisfatorio',
+  pendente: 'Pendente'
+}[nivel] || nivel)
+
+const classeNivelAluno = (nivel: string) => ({
+  insatisfatorio: 'bg-red-100 text-red-700',
+  regular: 'bg-amber-100 text-amber-700',
+  satisfatorio: 'bg-green-100 text-green-700',
+  pendente: 'bg-gray-100 text-gray-500'
+}[nivel] || 'bg-gray-100 text-gray-500')
 
 const formatarDataHora = (d: string) => new Date(d).toLocaleDateString('pt-BR', {
   day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
@@ -286,9 +288,14 @@ onMounted(async () => {
     formEntrega.value.anexos = submissaoData.anexos || []
   }
 
-  // Carregar correção IA se existir
+  // Carregar correção IA e avaliações por habilidade
   if (submissaoData?.corrigido_em) {
-    correcaoIA.value = await getCorrecao(submissaoData.id)
+    const [correcao, avaliacoes] = await Promise.all([
+      getCorrecao(submissaoData.id),
+      fetchAvaliacaoHabilidades(submissaoData.id).catch(() => [])
+    ])
+    correcaoIA.value = correcao
+    minhasAvaliacoes.value = avaliacoes
   }
 
   carregando.value = false

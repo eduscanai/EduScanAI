@@ -321,11 +321,31 @@ export const useAssignments = () => {
     if (err) throw err
   }
 
+  const fetchAvaliacaoHabilidades = async (envioId: string) => {
+    const { data, error: err } = await supabase
+      .from('avaliacao_habilidades')
+      .select('*, bncc_habilidades(id, code, description, topic_id, bncc_topicos(id, name))')
+      .eq('envio_id', envioId)
+    if (err) throw err
+    return data || []
+  }
+
+  const fetchAvaliacoesAtividade = async (atividadeId: string) => {
+    // Busca todas as avaliacoes de todos os envios de uma atividade
+    const { data, error: err } = await supabase
+      .from('avaliacao_habilidades')
+      .select('*, bncc_habilidades(id, code, description, topic_id, bncc_topicos(id, name)), envios!inner(atividade_id, aluno_id)')
+      .eq('envios.atividade_id', atividadeId)
+    if (err) throw err
+    return data || []
+  }
+
   return {
     assignments, loading, error,
     listAssignments, getAssignment, createAssignment,
     updateAssignment, publishAssignment, closeAssignment, deleteAssignment,
     countAssignments, fetchRecentAssignments, fetchPendingForStudent,
-    toggleVisibilidade, fetchHabilidades, saveHabilidades
+    toggleVisibilidade, fetchHabilidades, saveHabilidades,
+    fetchAvaliacaoHabilidades, fetchAvaliacoesAtividade
   }
 }
