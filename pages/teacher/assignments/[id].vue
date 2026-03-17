@@ -160,9 +160,9 @@
             <h2 class="text-heading-3">Alunos</h2>
             <div class="flex items-center gap-3 text-sm text-gray-500">
               <span>{{ totalEntregues }}/{{ alunosComStatus.length }} entregues</span>
-              <span>{{ corrigidas }} corrigida{{ corrigidas !== 1 ? 's' : '' }}</span>
-              <span v-if="corrigidasIA > 0" class="text-purple-600">
-                {{ corrigidasIA }} via IA
+              <span>{{ validadas }} validada{{ validadas !== 1 ? 's' : '' }}</span>
+              <span v-if="aguardandoValidacao > 0" class="text-purple-600">
+                {{ aguardandoValidacao }} aguardando validacao
               </span>
             </div>
           </div>
@@ -190,10 +190,10 @@
                 </div>
               </div>
               <div class="flex items-center gap-3">
-                <!-- Corrigida pela IA -->
-                <template v-if="aluno.submissao?.corrigido_em && aluno.submissao?.status_processamento === 'corrigido'">
-                  <span class="text-xs text-purple-600 bg-purple-50 px-2 py-0.5 rounded-full font-medium">
-                    Corrigida pela IA
+                <!-- Corrigida pela IA + Validada -->
+                <template v-if="aluno.submissao?.corrigido_em && aluno.submissao?.validado_professor">
+                  <span class="text-xs text-green-600 bg-green-50 px-2 py-0.5 rounded-full font-medium">
+                    Validada
                   </span>
                   <span class="text-sm font-semibold text-green-600">
                     {{ aluno.submissao.nota }}/{{ atividade.nota_maxima }}
@@ -203,6 +203,21 @@
                     class="btn-outline text-xs px-3 py-1 no-underline"
                   >
                     Ver
+                  </NuxtLink>
+                </template>
+                <!-- Corrigida pela IA, aguardando validacao (envio do aluno) -->
+                <template v-else-if="aluno.submissao?.corrigido_em && aluno.submissao?.status_processamento === 'corrigido'">
+                  <span class="text-xs text-purple-600 bg-purple-50 px-2 py-0.5 rounded-full font-medium">
+                    IA corrigiu
+                  </span>
+                  <span class="text-sm font-semibold text-purple-600">
+                    {{ aluno.submissao.nota }}/{{ atividade.nota_maxima }}
+                  </span>
+                  <NuxtLink
+                    :to="`/teacher/submissions/${aluno.submissao.id}`"
+                    class="btn-primary text-xs px-3 py-1 no-underline"
+                  >
+                    Validar
                   </NuxtLink>
                 </template>
                 <!-- Corrigida manualmente -->
@@ -235,16 +250,16 @@
                     Corrigir Manual
                   </NuxtLink>
                 </template>
-                <!-- Entregue, aguardando -->
+                <!-- Entregue, aguardando correcao IA -->
                 <template v-else-if="aluno.submissao">
                   <span class="text-xs text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full font-medium">
-                    Aguardando correcao
+                    Aguardando IA
                   </span>
                   <NuxtLink
                     :to="`/teacher/submissions/${aluno.submissao.id}`"
                     class="btn-outline text-xs px-3 py-1 no-underline"
                   >
-                    Corrigir
+                    Corrigir Manual
                   </NuxtLink>
                 </template>
                 <!-- Nao entregou -->
@@ -475,8 +490,8 @@ const alunosComStatus = computed(() => {
 })
 
 const totalEntregues = computed(() => alunosComStatus.value.filter(a => a.submissao).length)
-const corrigidas = computed(() => submissoes.value.filter(s => s.corrigido_em).length)
-const corrigidasIA = computed(() => submissoes.value.filter(s => s.corrigido_em && s.status_processamento === 'corrigido').length)
+const validadas = computed(() => submissoes.value.filter(s => s.corrigido_em && (s as any).validado_professor).length)
+const aguardandoValidacao = computed(() => submissoes.value.filter(s => s.corrigido_em && s.status_processamento === 'corrigido' && !(s as any).validado_professor).length)
 const mediaNotas = computed(() => {
   const notas = submissoes.value.filter(s => s.nota !== null).map(s => s.nota as number)
   if (notas.length === 0) return null

@@ -10,55 +10,75 @@ export default defineEventHandler(async (event) => {
   }
 
   // Verificar atividade
-  const { data: assignment, error: assignmentErr } = await client
+  const { data: atividade, error: atividadeErr } = await client
     .from('atividades')
     .select('id, status, escola_id, professor_id, turma_id')
     .eq('id', atividade_id)
     .single()
 
-  if (assignmentErr || !assignment) {
+  if (atividadeErr || !atividade) {
     throw createError({ statusCode: 404, message: 'Atividade não encontrada' })
   }
 
-  // Verificar permissão
-  if (profile.role !== 'admin' && assignment.professor_id !== profile.id) {
+  if (profile.role !== 'admin' && atividade.professor_id !== profile.id) {
     throw createError({ statusCode: 403, message: 'Sem permissão' })
   }
 
-  // Verificar status
-  if (assignment.status !== 'published') {
-    throw createError({ statusCode: 400, message: 'A atividade precisa estar publicada para receber envios' })
+  if (atividade.status !== 'published') {
+    throw createError({ statusCode: 400, message: 'A atividade precisa estar publicada' })
   }
 
-  // Criar envio em lote (a IA processará os arquivos e identificará os alunos)
-  const { data: submission, error: subErr } = await client
+  // Buscar alunos da turma
+  const { data: matriculas } = await client
+    .from('turma_alunos')
+    .select('student_id')
+    .eq('class_id', atividade.turma_id)
+
+  const alunoIds = (matriculas || []).map((m: any) => m.student_id)
+
+  if (alunoIds.length === 0) {
+    throw createError({ statusCode: 400, message: 'Nenhum aluno matriculado nesta turma' })
+  }
+
+  // Criar um envio por aluno com os arquivos anexados
+  // A IA vai processar depois e identificar cada aluno nos PDFs
+  // Por enquanto, criamos envios para todos os alunos com os mesmos arquivos
+  const envios = alunoIds.map((alunoId: string) => ({
+    atividade_id,
+    aluno_id: alunoId,
+    conteudo: null,
+    anexos: arquivos,
+    origem: 'professor_lote',
+    status_processamento: 'pendente',
+    validado_professor: true, // Lote do professor ja vem validado
+    enviado_em: new Date().toISOString()
+  }))
+
+  // Upsert para nao duplicar (atividade_id + aluno_id e unique)
+  const { data: criados, error: insertErr } = await client
     .from('envios')
-    .insert({
-      atividade_id,
-      aluno_id: profile.id,
-      conteudo: null,
-      anexos: arquivos,
-      origem: 'professor_lote',
-      status_processamento: 'pendente',
-      enviado_em: new Date().toISOString()
-    })
-    .select()
-    .single()
+    .upsert(envios, { onConflict: 'atividade_id,aluno_id' })
+    .select('id, aluno_id')
 
-  if (subErr) {
-    throw createError({ statusCode: 500, message: 'Erro ao criar envio: ' + subErr.message })
+  if (insertErr) {
+    throw createError({ statusCode: 500, message: 'Erro ao criar envios: ' + insertErr.message })
   }
 
-  // Disparar correção assíncrona (fire and forget)
-  if (submission) {
+  // Disparar correcao IA para cada envio (fire and forget)
+  const enviosCriados = criados || []
+  for (const envio of enviosCriados) {
     $fetch('/api/corrigir', {
       method: 'POST',
-      body: { envio_id: submission.id, modo: 'lote' },
+      body: { envio_id: envio.id },
       headers: event.headers
     }).catch(err => {
-      console.error(`Erro ao processar lote ${submission.id}:`, err.message)
+      console.error(`Erro ao processar envio ${envio.id}:`, err.message)
     })
   }
 
-  return { id: submission.id, status: 'pendente', arquivos: arquivos.length }
+  return {
+    total_envios: enviosCriados.length,
+    total_alunos: alunoIds.length,
+    status: 'processando'
+  }
 })

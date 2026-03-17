@@ -11,7 +11,10 @@ interface Submission {
   corrigido_por: string | null
   origem: 'aluno' | 'professor_lote'
   status_processamento: 'pendente' | 'processando' | 'corrigido' | 'erro'
-  profiles?: { id: string; full_name: string; email: string; avatar_url: string | null }
+  validado_professor: boolean
+  validado_em: string | null
+  validado_por: string | null
+  perfis?: { id: string; full_name: string; email: string; avatar_url: string | null }
 }
 
 export const useSubmissions = () => {
@@ -116,6 +119,36 @@ export const useSubmissions = () => {
           corrigido_em: new Date().toISOString(),
           corrigido_por: usuario.value.id!
         })
+        .eq('id', submissionId)
+        .select('*, perfis(id, full_name, email, avatar_url)')
+        .single()
+      if (err) throw err
+      return data as Submission
+    } catch (e: any) {
+      error.value = e.message
+      throw e
+    } finally {
+      loading.value = false
+    }
+  }
+
+  const validarCorrecao = async (submissionId: string, novaNotaOpcional?: number, novoComentarioOpcional?: string) => {
+    if (!usuario.value.id) throw new Error('Usuário não autenticado')
+    loading.value = true
+    error.value = null
+    try {
+      const updates: any = {
+        validado_professor: true,
+        validado_em: new Date().toISOString(),
+        validado_por: usuario.value.id
+      }
+      // Professor pode ajustar nota/comentario ao validar
+      if (novaNotaOpcional !== undefined) updates.nota = novaNotaOpcional
+      if (novoComentarioOpcional !== undefined) updates.comentario = novoComentarioOpcional
+
+      const { data, error: err } = await supabase
+        .from('envios')
+        .update(updates)
         .eq('id', submissionId)
         .select('*, perfis(id, full_name, email, avatar_url)')
         .single()
@@ -320,7 +353,7 @@ export const useSubmissions = () => {
   return {
     submissions, loading, error,
     getSubmissionsForAssignment, getSubmission, getMySubmission,
-    submitWork, submitLote, gradeSubmission,
+    submitWork, submitLote, gradeSubmission, validarCorrecao,
     fetchGradedForStudent, fetchUngradedForTeacher, countUngradedForTeacher,
     fetchStudentScoresOverTime, fetchClassStudentScores
   }

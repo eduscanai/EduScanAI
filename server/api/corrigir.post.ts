@@ -1,37 +1,38 @@
 import { serverSupabaseServiceRole } from '#supabase/server'
 
-// Função isolada que será substituída pela IA real no futuro
+// Mock da IA — sera substituido pela IA real
+// Recebe: gabarito URLs, resposta URLs, habilidades
+// Retorna: nota, comentario, avaliacao por habilidade
 async function corrigirComIA(
-  pdfResposta: string | null,
-  pdfGabarito: string | null,
-  topicos: { id: string; nome: string; descricao: string | null }[]
+  respostaUrls: string[],
+  gabaritoUrls: string[],
+  habilidades: { id: string; code: string | null; description: string }[]
 ) {
-  // Mock: gera resultado simulado baseado nos tópicos
-  const totalQuestoes = Math.max(topicos.length * 2, 5)
+  // Mock: gera resultado simulado
+  const totalQuestoes = Math.max(habilidades.length * 2, 5)
   const acertos = Math.floor(Math.random() * (totalQuestoes + 1))
   const nota = Math.round((acertos / totalQuestoes) * 10 * 10) / 10
 
-  const topicosResult = topicos.map(t => {
-    const total = 2
-    const acertosTopico = Math.floor(Math.random() * (total + 1))
-    const percentual = Math.round((acertosTopico / total) * 100)
+  const niveis = ['insatisfatorio', 'regular', 'satisfatorio'] as const
+  const avaliacaoHabilidades = habilidades.map(h => {
+    const nivelIdx = Math.floor(Math.random() * 3)
+    const nivel = niveis[nivelIdx]
     return {
-      topico_id: t.id,
-      nome: t.nome,
-      acertos: acertosTopico,
-      total,
-      percentual,
-      nivel: percentual >= 70 ? 'facil' : percentual >= 40 ? 'medio' : 'dificil',
-      observacao: `O aluno ${percentual >= 70 ? 'demonstrou bom domínio' : percentual >= 40 ? 'teve desempenho mediano' : 'precisa de reforço'} em ${t.nome}.`
+      habilidade_id: h.id,
+      nivel,
+      observacao: `${nivel === 'satisfatorio' ? 'Demonstrou dominio' : nivel === 'regular' ? 'Desempenho mediano' : 'Precisa de reforco'} em ${h.code || h.description.substring(0, 30)}.`
     }
   })
 
+  const comentario = `O aluno acertou ${acertos} de ${totalQuestoes} questoes, obtendo nota ${nota}. ${acertos >= totalQuestoes * 0.7 ? 'Bom desempenho geral.' : 'Ha pontos a melhorar.'}`
+
   return {
-    nota_geral: nota,
+    nota,
     total_questoes: totalQuestoes,
     acertos,
-    resumo: `O aluno acertou ${acertos} de ${totalQuestoes} questões, obtendo nota ${nota}. ${acertos >= totalQuestoes * 0.7 ? 'Bom desempenho geral.' : 'Há pontos a melhorar.'}`,
-    topicos: topicosResult
+    comentario,
+    avaliacao_habilidades: avaliacaoHabilidades,
+    resposta_raw: { nota, acertos, totalQuestoes, avaliacaoHabilidades, modelo: 'mock-v1' }
   }
 }
 
@@ -44,10 +45,10 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, message: 'envio_id é obrigatório' })
   }
 
-  // 1. Buscar envio e atualizar status → processando
+  // 1. Buscar envio com atividade
   const { data: envio, error: envioErr } = await client
     .from('envios')
-    .select('*, atividades(id, anexos, escola_id, professor_id)')
+    .select('*, atividades(id, anexos, gabarito, escola_id, professor_id)')
     .eq('id', envio_id)
     .single()
 
@@ -55,40 +56,47 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 404, message: 'Envio não encontrado' })
   }
 
-  // Verificar permissão (professor dono ou admin)
-  const assignment = envio.atividades as any
-  if (profile.role !== 'admin' && assignment.professor_id !== profile.id) {
+  const atividade = envio.atividades as any
+  if (profile.role !== 'admin' && atividade.professor_id !== profile.id) {
     throw createError({ statusCode: 403, message: 'Sem permissão para corrigir este envio' })
   }
 
+  // 2. Marcar como processando
   await client
     .from('envios')
     .update({ status_processamento: 'processando' })
     .eq('id', envio_id)
 
   try {
-    // 2. Buscar tópicos da atividade
-    const { data: topicos } = await client
-      .from('topicos_atividade')
-      .select('id, nome, descricao')
+    // 3. Buscar habilidades BNCC vinculadas a atividade
+    const { data: habLinks } = await client
+      .from('atividade_habilidades')
+      .select('habilidade_id, bncc_habilidades(id, code, description)')
       .eq('atividade_id', envio.atividade_id)
 
-    // 3. Chamar IA (mock por enquanto)
-    const gabarito = assignment.anexos?.[0]?.url || null
-    const resposta = envio.anexos?.[0]?.url || null
+    const habilidades = (habLinks || []).map((h: any) => ({
+      id: h.bncc_habilidades.id,
+      code: h.bncc_habilidades.code,
+      description: h.bncc_habilidades.description
+    }))
 
-    const resultado = await corrigirComIA(resposta, gabarito, topicos || [])
+    // 4. Extrair URLs do gabarito e da resposta
+    const gabaritoUrls = (atividade.gabarito || []).map((g: any) => g.url)
+    const respostaUrls = (envio.anexos || []).map((a: any) => a.url)
 
-    // 4. Insert em correcoes_ia
+    // 5. Chamar IA (mock por enquanto)
+    const resultado = await corrigirComIA(respostaUrls, gabaritoUrls, habilidades)
+
+    // 6. Gravar em correcoes_ia
     const { data: correcao, error: correcaoErr } = await client
       .from('correcoes_ia')
       .upsert({
         envio_id,
-        nota_geral: resultado.nota_geral,
+        nota_geral: resultado.nota,
         total_questoes: resultado.total_questoes,
         acertos: resultado.acertos,
-        resumo_ia: resultado.resumo,
-        resposta_raw: resultado,
+        resumo_ia: resultado.comentario,
+        resposta_raw: resultado.resposta_raw,
         modelo_ia: 'mock-v1',
         processado_em: new Date().toISOString()
       }, { onConflict: 'envio_id' })
@@ -97,45 +105,44 @@ export default defineEventHandler(async (event) => {
 
     if (correcaoErr) throw correcaoErr
 
-    // 5. Insert em desempenho_topico
-    if (resultado.topicos.length > 0 && correcao) {
-      // Limpar desempenhos anteriores
+    // 7. Gravar avaliacao por habilidade
+    if (resultado.avaliacao_habilidades.length > 0) {
+      // Limpar anteriores
       await client
-        .from('desempenho_topico')
+        .from('avaliacao_habilidades')
         .delete()
-        .eq('correcao_id', correcao.id)
+        .eq('envio_id', envio_id)
 
-      const desempenhos = resultado.topicos.map(t => ({
-        correcao_id: correcao.id,
-        topico_id: t.topico_id,
-        acertos: t.acertos,
-        total: t.total,
-        percentual: t.percentual,
-        nivel: t.nivel,
-        observacao_ia: t.observacao
+      const avaliacoes = resultado.avaliacao_habilidades.map(a => ({
+        envio_id,
+        habilidade_id: a.habilidade_id,
+        nivel: a.nivel,
+        observacao: a.observacao
       }))
 
-      const { error: desempErr } = await client
-        .from('desempenho_topico')
-        .insert(desempenhos)
+      const { error: avErr } = await client
+        .from('avaliacao_habilidades')
+        .insert(avaliacoes)
 
-      if (desempErr) throw desempErr
+      if (avErr) console.error('Erro ao gravar avaliacao_habilidades:', avErr.message)
     }
 
-    // 6. Atualizar envio → corrigido + nota
+    // 8. Atualizar envio com nota e status
+    const isLote = envio.origem === 'professor_lote'
     await client
       .from('envios')
       .update({
         status_processamento: 'corrigido',
-        nota: resultado.nota_geral,
-        comentario: resultado.resumo,
-        corrigido_em: new Date().toISOString()
+        nota: resultado.nota,
+        comentario: resultado.comentario,
+        corrigido_em: new Date().toISOString(),
+        // Lote ja vem validado, envio do aluno precisa validacao
+        validado_professor: isLote
       })
       .eq('id', envio_id)
 
-    return { success: true, nota: resultado.nota_geral, resumo: resultado.resumo }
+    return { success: true, nota: resultado.nota, comentario: resultado.comentario }
   } catch (e: any) {
-    // 7. Erro → status erro
     await client
       .from('envios')
       .update({ status_processamento: 'erro' })
