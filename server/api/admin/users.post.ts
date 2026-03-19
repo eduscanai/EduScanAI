@@ -9,7 +9,7 @@ export default defineEventHandler(async (event) => {
   const client = await serverSupabaseServiceRole(event)
   const body = await readBody(event)
 
-  const { email, password, full_name, role, school_id, matricula, cpf, sexo, data_nascimento } = body
+  const { email, password, full_name, role, school_id, matricula, cpf, sexo, data_nascimento, foto_url } = body
 
   // Validar campos obrigatórios
   if (!email || !password || !full_name || !role || !school_id) {
@@ -82,7 +82,8 @@ export default defineEventHandler(async (event) => {
       matricula: matricula || null,
       cpf: cpf || null,
       sexo: sexo || null,
-      data_nascimento: data_nascimento || null
+      data_nascimento: data_nascimento || null,
+      avatar_url: foto_url || null
     }, { onConflict: 'id' })
 
   if (profileError) {
