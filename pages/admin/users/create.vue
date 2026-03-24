@@ -140,6 +140,133 @@
               <input id="data_nascimento" type="date" v-model="form.data_nascimento" class="form-input" />
             </div>
           </div>
+
+          <!-- Responsaveis -->
+          <div class="mt-6 pt-6 border-t border-gray-200">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-heading-3">Responsaveis</h3>
+              <button
+                type="button"
+                @click="adicionarResponsavel"
+                class="btn-outline text-xs px-3 py-1.5"
+              >
+                + Adicionar
+              </button>
+            </div>
+
+            <div v-if="form.responsaveis.length === 0" class="text-center py-6 text-sm text-gray-400">
+              Nenhum responsavel adicionado
+            </div>
+
+            <div v-else class="space-y-6">
+              <div
+                v-for="(resp, i) in form.responsaveis"
+                :key="i"
+                class="bg-gray-50 rounded-lg p-4 relative"
+              >
+                <button
+                  type="button"
+                  @click="form.responsaveis.splice(i, 1)"
+                  class="absolute top-3 right-3 p-1 text-gray-400 hover:text-critical-500 transition-colors"
+                >
+                  <Icone :tamanho="16">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  </Icone>
+                </button>
+
+                <p class="text-xs font-semibold text-gray-500 uppercase mb-3">Responsavel {{ i + 1 }}</p>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div class="md:col-span-2">
+                    <label class="form-label">Nome completo *</label>
+                    <input v-model="resp.nome" class="form-input" placeholder="Nome do responsavel" />
+                  </div>
+
+                  <div>
+                    <label class="form-label">Parentesco *</label>
+                    <CampoSelecao
+                      :modelValue="resp.parentesco"
+                      @update:modelValue="resp.parentesco = $event as string"
+                      texto-reservado="Selecione"
+                      :opcoes="opcoesParentesco"
+                    />
+                  </div>
+
+                  <div>
+                    <label class="form-label">CPF</label>
+                    <input v-model="resp.cpf" class="form-input" placeholder="000.000.000-00" maxlength="14" />
+                  </div>
+
+                  <div>
+                    <label class="form-label">RG</label>
+                    <input v-model="resp.rg" class="form-input" placeholder="0000000" />
+                  </div>
+
+                  <div>
+                    <label class="form-label">Telefone *</label>
+                    <input v-model="resp.telefone" class="form-input" placeholder="(00) 00000-0000" />
+                  </div>
+
+                  <div>
+                    <label class="form-label">Telefone 2</label>
+                    <input v-model="resp.telefone2" class="form-input" placeholder="(00) 00000-0000" />
+                  </div>
+
+                  <div>
+                    <label class="form-label">Email</label>
+                    <input v-model="resp.email" type="email" class="form-input" placeholder="email@exemplo.com" />
+                  </div>
+
+                  <div class="md:col-span-2">
+                    <label class="form-label">Endereco</label>
+                    <input v-model="resp.endereco" class="form-input" placeholder="Rua, numero, bairro" />
+                  </div>
+
+                  <div>
+                    <label class="form-label">Cidade</label>
+                    <input v-model="resp.cidade" class="form-input" placeholder="Cidade" />
+                  </div>
+
+                  <div class="grid grid-cols-2 gap-3">
+                    <div>
+                      <label class="form-label">UF</label>
+                      <input v-model="resp.uf" class="form-input" placeholder="SP" maxlength="2" />
+                    </div>
+                    <div>
+                      <label class="form-label">CEP</label>
+                      <input v-model="resp.cep" class="form-input" placeholder="00000-000" />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label class="form-label">Profissao</label>
+                    <input v-model="resp.profissao" class="form-input" placeholder="Profissao" />
+                  </div>
+
+                  <div>
+                    <label class="form-label">Local de trabalho</label>
+                    <input v-model="resp.local_trabalho" class="form-input" placeholder="Empresa / local" />
+                  </div>
+
+                  <div class="md:col-span-2 flex items-center gap-6">
+                    <label class="flex items-center gap-2 cursor-pointer">
+                      <input type="checkbox" v-model="resp.responsavel_financeiro" class="rounded border-gray-300 text-primary-500 focus:ring-primary-500" />
+                      <span class="text-sm text-gray-700">Responsavel financeiro</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                      <input type="checkbox" v-model="resp.responsavel_pedagogico" class="rounded border-gray-300 text-primary-500 focus:ring-primary-500" />
+                      <span class="text-sm text-gray-700">Responsavel pedagogico</span>
+                    </label>
+                  </div>
+
+                  <div class="md:col-span-2">
+                    <label class="form-label">Observacoes</label>
+                    <textarea v-model="resp.observacoes" class="form-input resize-y min-h-[60px]" placeholder="Observacoes sobre o responsavel"></textarea>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div class="flex items-center justify-end gap-3 mt-8 pt-6 border-t border-gray-200">
@@ -195,7 +322,15 @@ const form = ref({
   cpf: '',
   sexo: '',
   data_nascimento: '',
-  foto_url: ''
+  foto_url: '',
+  responsaveis: [] as {
+    nome: string; parentesco: string; cpf: string; rg: string;
+    telefone: string; telefone2: string; email: string;
+    endereco: string; cidade: string; uf: string; cep: string;
+    profissao: string; local_trabalho: string;
+    responsavel_financeiro: boolean; responsavel_pedagogico: boolean;
+    observacoes: string;
+  }[]
 })
 
 const fotoPreview = ref('')
@@ -289,6 +424,32 @@ const opcoesSexo = [
   { rotulo: 'Feminino', valor: 'F' }
 ]
 
+const opcoesParentesco = [
+  { rotulo: 'Pai', valor: 'pai' },
+  { rotulo: 'Mae', valor: 'mae' },
+  { rotulo: 'Avo (paterno)', valor: 'avo' },
+  { rotulo: 'Avo (materno)', valor: 'avo_m' },
+  { rotulo: 'Tio', valor: 'tio' },
+  { rotulo: 'Tia', valor: 'tia' },
+  { rotulo: 'Irmao', valor: 'irmao' },
+  { rotulo: 'Irma', valor: 'irma' },
+  { rotulo: 'Padrasto', valor: 'padrasto' },
+  { rotulo: 'Madrasta', valor: 'madrasta' },
+  { rotulo: 'Tutor legal', valor: 'tutor' },
+  { rotulo: 'Outro', valor: 'outro' }
+]
+
+const adicionarResponsavel = () => {
+  form.value.responsaveis.push({
+    nome: '', parentesco: '', cpf: '', rg: '',
+    telefone: '', telefone2: '', email: '',
+    endereco: '', cidade: '', uf: '', cep: '',
+    profissao: '', local_trabalho: '',
+    responsavel_financeiro: false, responsavel_pedagogico: false,
+    observacoes: ''
+  })
+}
+
 // Notificação
 const notificacao = ref({
   visivel: false,
@@ -346,15 +507,44 @@ const criar = async () => {
       if (form.value.sexo) payload.sexo = form.value.sexo
       if (form.value.data_nascimento) payload.data_nascimento = form.value.data_nascimento
     }
-    await createUser(payload)
-    mostrarNotificacao('sucesso', 'Usuário criado com sucesso')
+    const result = await createUser(payload)
 
-    // Limpar formulário
-    form.value = { full_name: '', email: '', password: '', role: '', matricula: '', cpf: '', sexo: '', data_nascimento: '', foto_url: '' }
+    // Salvar responsaveis se for aluno
+    if (form.value.role === 'student' && form.value.responsaveis.length > 0 && result?.user?.id) {
+      const responsaveisValidos = form.value.responsaveis.filter(r => r.nome.trim() && r.parentesco)
+      if (responsaveisValidos.length > 0) {
+        const inserts = responsaveisValidos.map(r => ({
+          escola_id: usuario.value.schoolId,
+          aluno_id: result.user.id,
+          nome: r.nome,
+          parentesco: r.parentesco,
+          cpf: r.cpf || null,
+          rg: r.rg || null,
+          telefone: r.telefone || null,
+          telefone2: r.telefone2 || null,
+          email: r.email || null,
+          endereco: r.endereco || null,
+          cidade: r.cidade || null,
+          uf: r.uf || null,
+          cep: r.cep || null,
+          profissao: r.profissao || null,
+          local_trabalho: r.local_trabalho || null,
+          responsavel_financeiro: r.responsavel_financeiro,
+          responsavel_pedagogico: r.responsavel_pedagogico,
+          observacoes: r.observacoes || null
+        }))
+        await supabase.from('responsaveis').insert(inserts)
+      }
+    }
+
+    mostrarNotificacao('sucesso', 'Usuario criado com sucesso')
+
+    // Limpar formulario
+    form.value = { full_name: '', email: '', password: '', role: '', matricula: '', cpf: '', sexo: '', data_nascimento: '', foto_url: '', responsaveis: [] }
     cpfFormatado.value = ''
     fotoPreview.value = ''
 
-    // Redirecionar após 1.5s
+    // Redirecionar apos 1.5s
     setTimeout(() => {
       navigateTo('/admin/users')
     }, 1500)

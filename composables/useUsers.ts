@@ -112,7 +112,7 @@ export const useUsers = () => {
     return updateUser(id, { is_active: isActive } as Partial<Profile>)
   }
 
-  const createUser = async (userData: { email: string; password: string; full_name: string; role: string; matricula?: string; cpf?: string; sexo?: string; data_nascimento?: string }) => {
+  const createUser = async (userData: { email: string; password: string; full_name: string; role: string; matricula?: string; cpf?: string; sexo?: string; data_nascimento?: string; foto_url?: string }) => {
     loading.value = true
     error.value = null
     try {
