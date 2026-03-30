@@ -160,7 +160,7 @@ const alunoId = route.params.alunoId as string
 definePageMeta({
   layout: 'dashboard',
   middleware: ['role'],
-  requiredRole: ['admin', 'pedagogue', 'teacher']
+  requiredRole: ['admin', 'pedagogue', 'teacher', 'collaborator']
 })
 
 const filtros = reactive({

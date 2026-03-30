@@ -209,7 +209,7 @@ import BarraBusca from '~/components/form/BarraBusca/BarraBusca.vue'
 definePageMeta({
   layout: 'dashboard',
   middleware: ['role'],
-  requiredRole: ['admin', 'pedagogue', 'teacher']
+  requiredRole: ['admin', 'pedagogue', 'teacher', 'collaborator']
 })
 
 const { canCreateAssignments } = usePermissions()

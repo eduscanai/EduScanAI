@@ -8,6 +8,7 @@ export const usePermissions = () => {
   const isPedagogue = computed(() => role.value === 'pedagogue')
   const isTeacher = computed(() => role.value === 'teacher')
   const isStudent = computed(() => role.value === 'student')
+  const isCollaborator = computed(() => role.value === 'collaborator')
 
   // Permission helpers
   const canManageUsers = computed(() => isAdmin.value)
@@ -16,11 +17,11 @@ export const usePermissions = () => {
   const canManageSubjects = computed(() => isAdmin.value)
   const canManageClasses = computed(() => isAdmin.value)
 
-  const canViewAllClasses = computed(() => isAdmin.value || isPedagogue.value)
-  const canViewAllStudents = computed(() => isAdmin.value || isPedagogue.value)
-  const canViewAllTeachers = computed(() => isAdmin.value || isPedagogue.value)
-  const canViewAssignments = computed(() => isAdmin.value || isPedagogue.value || isTeacher.value || isStudent.value)
-  const canViewReports = computed(() => isAdmin.value || isPedagogue.value)
+  const canViewAllClasses = computed(() => isAdmin.value || isPedagogue.value || isCollaborator.value)
+  const canViewAllStudents = computed(() => isAdmin.value || isPedagogue.value || isCollaborator.value)
+  const canViewAllTeachers = computed(() => isAdmin.value || isPedagogue.value || isCollaborator.value)
+  const canViewAssignments = computed(() => isAdmin.value || isPedagogue.value || isTeacher.value || isStudent.value || isCollaborator.value)
+  const canViewReports = computed(() => isAdmin.value || isPedagogue.value || isCollaborator.value)
   const canViewSettings = computed(() => isAdmin.value)
 
   const canCreateAssignments = computed(() => isAdmin.value || isTeacher.value)
@@ -33,6 +34,7 @@ export const usePermissions = () => {
     isPedagogue,
     isTeacher,
     isStudent,
+    isCollaborator,
     canManageUsers,
     canManageSchool,
     canManageAcademicYears,

@@ -187,7 +187,7 @@ import Notificacao from '~/components/feedback/Notificacao/Notificacao.vue'
 definePageMeta({
   layout: 'dashboard',
   middleware: ['role'],
-  requiredRole: ['admin', 'pedagogue', 'teacher', 'student']
+  requiredRole: ['admin', 'pedagogue', 'teacher', 'student', 'collaborator']
 })
 
 const { isAdmin } = usePermissions()

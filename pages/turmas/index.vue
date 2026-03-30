@@ -133,7 +133,7 @@ import CartaoTurma from '~/components/composed/CartaoTurma/CartaoTurma.vue'
 definePageMeta({
   layout: 'dashboard',
   middleware: ['role'],
-  requiredRole: ['admin', 'pedagogue', 'teacher']
+  requiredRole: ['admin', 'pedagogue', 'teacher', 'collaborator']
 })
 
 const supabase = useSupabaseClient()

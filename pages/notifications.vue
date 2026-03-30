@@ -78,7 +78,7 @@ import Icone from '~/components/ui/Icone/Icone.vue'
 definePageMeta({
   layout: 'dashboard',
   middleware: ['role'],
-  requiredRole: ['admin', 'pedagogue', 'teacher', 'student']
+  requiredRole: ['admin', 'pedagogue', 'teacher', 'student', 'collaborator']
 })
 
 const {

@@ -269,6 +269,53 @@
           </div>
         </div>
 
+        <!-- Campos extras para Colaborador -->
+        <div v-if="form.role === 'collaborator'" class="mt-6 pt-6 border-t border-gray-200">
+          <h3 class="text-heading-3 mb-4">Dados do Colaborador</h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="form-label">CPF</label>
+              <input
+                type="text"
+                :value="cpfFormatado"
+                @input="onCpfInput"
+                class="form-input"
+                placeholder="000.000.000-00"
+                maxlength="14"
+              />
+            </div>
+            <div>
+              <label class="form-label">Telefone</label>
+              <input v-model="form.telefone" class="form-input" placeholder="(00) 00000-0000" />
+            </div>
+            <div>
+              <label class="form-label">Sexo</label>
+              <CampoSelecao
+                :modelValue="form.sexo"
+                @update:modelValue="form.sexo = $event as string"
+                texto-reservado="Selecione"
+                :opcoes="opcoesSexo"
+              />
+            </div>
+            <div>
+              <label class="form-label">Data de Nascimento</label>
+              <input type="date" v-model="form.data_nascimento" class="form-input" />
+            </div>
+            <div class="md:col-span-2">
+              <label class="form-label">Endereco</label>
+              <input v-model="form.endereco" class="form-input" placeholder="Rua, numero, bairro, cidade - UF" />
+            </div>
+            <div>
+              <label class="form-label">Cargo / Funcao</label>
+              <input v-model="form.cargo" class="form-input" placeholder="Ex: Secretaria, Porteiro, Bibliotecario" />
+            </div>
+            <div>
+              <label class="form-label">RG</label>
+              <input v-model="form.rg" class="form-input" placeholder="0000000" />
+            </div>
+          </div>
+        </div>
+
         <div class="flex items-center justify-end gap-3 mt-8 pt-6 border-t border-gray-200">
           <NuxtLink to="/admin/users" class="btn-outline no-underline">
             Cancelar
@@ -322,6 +369,10 @@ const form = ref({
   cpf: '',
   sexo: '',
   data_nascimento: '',
+  telefone: '',
+  endereco: '',
+  cargo: '',
+  rg: '',
   foto_url: '',
   responsaveis: [] as {
     nome: string; parentesco: string; cpf: string; rg: string;
@@ -416,7 +467,8 @@ const erros = ref<Record<string, string>>({})
 const opcoesRole = [
   { rotulo: 'Pedagogo', valor: 'pedagogue' },
   { rotulo: 'Professor', valor: 'teacher' },
-  { rotulo: 'Estudante', valor: 'student' }
+  { rotulo: 'Estudante', valor: 'student' },
+  { rotulo: 'Colaborador', valor: 'collaborator' }
 ]
 
 const opcoesSexo = [
@@ -501,11 +553,17 @@ const criar = async () => {
       role: form.value.role
     }
     if (form.value.foto_url) payload.foto_url = form.value.foto_url
+    if (form.value.cpf) payload.cpf = form.value.cpf
+    if (form.value.sexo) payload.sexo = form.value.sexo
+    if (form.value.data_nascimento) payload.data_nascimento = form.value.data_nascimento
+    if (form.value.telefone) payload.telefone = form.value.telefone
+    if (form.value.endereco) payload.endereco = form.value.endereco
+    if (form.value.rg) payload.rg = form.value.rg
     if (form.value.role === 'student') {
       if (form.value.matricula) payload.matricula = form.value.matricula
-      if (form.value.cpf) payload.cpf = form.value.cpf
-      if (form.value.sexo) payload.sexo = form.value.sexo
-      if (form.value.data_nascimento) payload.data_nascimento = form.value.data_nascimento
+    }
+    if (form.value.role === 'collaborator') {
+      if (form.value.cargo) payload.cargo = form.value.cargo
     }
     const result = await createUser(payload)
 
@@ -540,7 +598,7 @@ const criar = async () => {
     mostrarNotificacao('sucesso', 'Usuario criado com sucesso')
 
     // Limpar formulario
-    form.value = { full_name: '', email: '', password: '', role: '', matricula: '', cpf: '', sexo: '', data_nascimento: '', foto_url: '', responsaveis: [] }
+    form.value = { full_name: '', email: '', password: '', role: '', matricula: '', cpf: '', sexo: '', data_nascimento: '', telefone: '', endereco: '', cargo: '', rg: '', foto_url: '', responsaveis: [] }
     cpfFormatado.value = ''
     fotoPreview.value = ''
 

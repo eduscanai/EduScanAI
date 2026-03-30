@@ -127,7 +127,7 @@ const router = useRouter()
 definePageMeta({
   layout: 'dashboard',
   middleware: ['role'],
-  requiredRole: ['admin', 'pedagogue']
+  requiredRole: ['admin', 'pedagogue', 'collaborator']
 })
 
 const { fetchStudentsList } = useUsers()

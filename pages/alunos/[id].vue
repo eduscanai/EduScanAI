@@ -162,7 +162,7 @@ const alunoId = route.params.id as string
 definePageMeta({
   layout: 'dashboard',
   middleware: ['role'],
-  requiredRole: ['admin', 'pedagogue']
+  requiredRole: ['admin', 'pedagogue', 'collaborator']
 })
 
 const { usuario } = useUsuario()

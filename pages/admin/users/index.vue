@@ -227,7 +227,8 @@ const opcoesRole = [
   { rotulo: 'Todos', valor: '' },
   { rotulo: 'Pedagogo', valor: 'pedagogue' },
   { rotulo: 'Professor', valor: 'teacher' },
-  { rotulo: 'Estudante', valor: 'student' }
+  { rotulo: 'Estudante', valor: 'student' },
+  { rotulo: 'Colaborador', valor: 'collaborator' }
 ]
 
 const colunasBase = [
@@ -340,7 +341,8 @@ const rotuloRole = (role: string) => {
     admin: 'Administrador',
     pedagogue: 'Pedagogo',
     teacher: 'Professor',
-    student: 'Estudante'
+    student: 'Estudante',
+    collaborator: 'Colaborador'
   }
   return mapa[role] || role
 }
@@ -350,7 +352,8 @@ const classeRole = (role: string) => {
     admin: 'bg-purple-50 text-purple-700',
     pedagogue: 'bg-blue-50 text-blue-700',
     teacher: 'bg-amber-50 text-amber-700',
-    student: 'bg-green-50 text-green-700'
+    student: 'bg-green-50 text-green-700',
+    collaborator: 'bg-teal-50 text-teal-700'
   }
   return mapa[role] || 'bg-gray-100 text-gray-700'
 }

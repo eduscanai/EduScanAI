@@ -171,7 +171,8 @@ const opcoesRole = [
   { rotulo: 'Administrador', valor: 'admin' },
   { rotulo: 'Pedagogo', valor: 'pedagogue' },
   { rotulo: 'Professor', valor: 'teacher' },
-  { rotulo: 'Estudante', valor: 'student' }
+  { rotulo: 'Estudante', valor: 'student' },
+  { rotulo: 'Colaborador', valor: 'collaborator' }
 ]
 
 // Notificação

@@ -73,7 +73,7 @@ import Cartao from '~/components/layout/Cartao/Cartao.vue'
 definePageMeta({
   layout: 'dashboard',
   middleware: ['role'],
-  requiredRole: ['admin', 'pedagogue', 'teacher', 'student']
+  requiredRole: ['admin', 'pedagogue', 'teacher', 'student', 'collaborator']
 })
 
 const { isAdmin, isPedagogue, isTeacher } = usePermissions()

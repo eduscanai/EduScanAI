@@ -26,7 +26,7 @@ export default defineEventHandler(async (event) => {
   const userRole = role || 'student'
 
   // Impedir criação de admin em massa
-  const rolesValidos = ['pedagogue', 'teacher', 'student']
+  const rolesValidos = ['pedagogue', 'teacher', 'student', 'collaborator']
   if (!rolesValidos.includes(userRole)) {
     throw createError({
       statusCode: 400,

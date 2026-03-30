@@ -320,7 +320,7 @@ const turmaId = route.params.id as string
 definePageMeta({
   layout: 'dashboard',
   middleware: ['role'],
-  requiredRole: ['admin', 'pedagogue', 'teacher']
+  requiredRole: ['admin', 'pedagogue', 'teacher', 'collaborator']
 })
 
 const { usuario } = useUsuario()

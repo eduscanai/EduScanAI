@@ -15,6 +15,6 @@ import Cartao from '~/components/layout/Cartao/Cartao.vue'
 definePageMeta({
   layout: 'dashboard',
   middleware: ['role'],
-  requiredRole: ['admin', 'pedagogue']
+  requiredRole: ['admin', 'pedagogue', 'collaborator']
 })
 </script>

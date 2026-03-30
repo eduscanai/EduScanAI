@@ -9,7 +9,7 @@ export default defineEventHandler(async (event) => {
   const client = await serverSupabaseServiceRole(event)
   const body = await readBody(event)
 
-  const { email, password, full_name, role, school_id, matricula, cpf, sexo, data_nascimento, foto_url } = body
+  const { email, password, full_name, role, school_id, matricula, cpf, sexo, data_nascimento, foto_url, telefone, endereco, rg, cargo } = body
 
   // Validar campos obrigatórios
   if (!email || !password || !full_name || !role || !school_id) {
@@ -44,7 +44,7 @@ export default defineEventHandler(async (event) => {
   }
 
   // Validar role
-  const rolesValidos = ['admin', 'pedagogue', 'teacher', 'student']
+  const rolesValidos = ['admin', 'pedagogue', 'teacher', 'student', 'collaborator']
   if (!rolesValidos.includes(role)) {
     throw createError({
       statusCode: 400,
@@ -83,7 +83,11 @@ export default defineEventHandler(async (event) => {
       cpf: cpf || null,
       sexo: sexo || null,
       data_nascimento: data_nascimento || null,
-      avatar_url: foto_url || null
+      avatar_url: foto_url || null,
+      phone: telefone || null,
+      endereco: endereco || null,
+      rg: rg || null,
+      cargo: cargo || null
     }, { onConflict: 'id' })
 
   if (profileError) {

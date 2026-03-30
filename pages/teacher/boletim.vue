@@ -183,7 +183,7 @@ import Notificacao from '~/components/feedback/Notificacao/Notificacao.vue'
 definePageMeta({
   layout: 'dashboard',
   middleware: ['role'],
-  requiredRole: ['admin', 'pedagogue', 'teacher']
+  requiredRole: ['admin', 'pedagogue', 'teacher', 'collaborator']
 })
 
 const { classes, fetchClasses } = useClasses()
