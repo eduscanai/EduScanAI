@@ -72,7 +72,7 @@ export const useCorrecoesIA = () => {
       // Buscar envios da atividade
       const { data: envios, error: err1 } = await supabase
         .from('envios')
-        .select('id, aluno_id, status_processamento, perfis(full_name)')
+        .select('id, aluno_id, status_processamento, perfis!submissions_student_id_fkey(full_name)')
         .eq('atividade_id', atividadeId)
       if (err1) throw err1
       if (!envios || envios.length === 0) return []

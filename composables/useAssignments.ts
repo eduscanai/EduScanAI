@@ -12,6 +12,7 @@ interface Assignment {
   nota_maxima: number
   peso: number
   status: 'draft' | 'published' | 'closed'
+  tipo: 'dissertativa' | 'objetiva'
   modo_envio: 'individual' | 'lote'
   visivel_aluno: boolean
   publicado_em: string | null
@@ -24,6 +25,13 @@ interface Assignment {
   perfis?: { full_name: string }
   categorias_avaliacao?: { name: string }
   periodos_avaliacao?: { name: string }
+  atividade_objetiva?: {
+    questoes: Array<{ numero: number; option_count: number; resposta: string; peso: number }>
+    matricula_em_blocos: boolean
+    marcador_url: string | null
+    folha_respostas_url: string | null
+    folha_solucao_url: string | null
+  } | null
 }
 
 export const useAssignments = () => {
@@ -158,7 +166,7 @@ export const useAssignments = () => {
     try {
       const { data, error: err } = await supabase
         .from('atividades')
-        .select('*, turmas(name), disciplinas(name), perfis(full_name), categorias_avaliacao(name), periodos_avaliacao(name)')
+        .select('*, turmas(name), disciplinas(name), perfis(full_name), categorias_avaliacao(name), periodos_avaliacao(name), atividade_objetiva(*)')
         .eq('id', id)
         .single()
       if (err) throw err
@@ -172,7 +180,7 @@ export const useAssignments = () => {
   }
 
   const createAssignment = async (data: {
-    class_ids: string[]
+    turma_ids: string[]
     disciplina_id?: string
     categoria_id?: string
     periodo_id?: string
@@ -188,12 +196,12 @@ export const useAssignments = () => {
   }) => {
     const { data: { user: currentUser } } = await supabase.auth.getUser()
     if (!currentUser?.id) throw new Error('Usuário não autenticado')
-    if (!data.class_ids.length) throw new Error('Selecione ao menos uma turma')
+    if (!data.turma_ids.length) throw new Error('Selecione ao menos uma turma')
     loading.value = true
     error.value = null
     try {
-      const { class_ids, ...rest } = data
-      const inserts = class_ids.map(turma_id => ({
+      const { turma_ids, ...rest } = data
+      const inserts = turma_ids.map(turma_id => ({
         ...rest,
         turma_id,
         escola_id: usuario.value.schoolId,

@@ -434,7 +434,8 @@ const {
 } = useClasses()
 
 const { academicYears, fetchAcademicYears } = useAcademicYear()
-const { subjects, fetchSubjects } = useSubjects()
+const { fetchDisciplinasDaTurma } = useTurmaDisciplinas()
+const disciplinasTurma = ref<{ id: string; name: string }[]>([])
 
 const { listAssignments, assignments: atividades } = useAssignments()
 
@@ -464,7 +465,7 @@ const opcoesAno = computed(() =>
 )
 
 const opcoesDisciplina = computed(() =>
-  subjects.value.map(s => ({ rotulo: s.name, valor: s.id }))
+  disciplinasTurma.value.map(s => ({ rotulo: s.name, valor: s.id }))
 )
 
 const rotuloTurno = (shift: string | null | undefined) => {
@@ -683,11 +684,14 @@ const mostrarNotificacao = (variante: 'sucesso' | 'aviso' | 'critico', titulo: s
 
 // --- Carregar dados ---
 onMounted(async () => {
-  const [turmaData] = await Promise.all([
+  const [turmaData, , disciplinasVinculadas] = await Promise.all([
     fetchClass(classId),
     fetchAcademicYears(),
-    fetchSubjects()
+    fetchDisciplinasDaTurma(classId)
   ])
+  disciplinasTurma.value = disciplinasVinculadas
+    .filter(d => d.disciplinas)
+    .map(d => ({ id: d.disciplinas!.id, name: d.disciplinas!.name }))
 
   if (turmaData) {
     turma.value = turmaData

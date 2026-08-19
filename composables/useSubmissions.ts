@@ -10,11 +10,23 @@ interface Submission {
   corrigido_em: string | null
   corrigido_por: string | null
   origem: 'aluno' | 'professor_lote'
-  status_processamento: 'pendente' | 'processando' | 'corrigido' | 'erro'
+  status_processamento: 'pendente' | 'processando' | 'aguardando_confirmacao' | 'corrigido' | 'erro'
   validado_professor: boolean
   validado_em: string | null
   validado_por: string | null
   perfis?: { id: string; full_name: string; email: string; avatar_url: string | null }
+  envio_objetivo?: {
+    arquivo_original_url: string | null
+    matricula_detectada: string | null
+    imagem_processada_url: string | null
+    respostas_detectadas: Record<string, string> | null
+    percentual: number | null
+    acertos: number | null
+    erros: number | null
+    em_branco: number | null
+    detalhes: unknown
+    log_excerto: string | null
+  } | null
 }
 
 export const useSubmissions = () => {
@@ -31,7 +43,7 @@ export const useSubmissions = () => {
     try {
       const { data, error: err } = await supabase
         .from('envios')
-        .select('*, perfis(id, full_name, email, avatar_url)')
+        .select('*, perfis!submissions_student_id_fkey(id, full_name, email, avatar_url), envio_objetivo(*)')
         .eq('atividade_id', assignmentId)
         .order('enviado_em', { ascending: false })
       if (err) throw err
@@ -51,7 +63,7 @@ export const useSubmissions = () => {
     try {
       const { data, error: err } = await supabase
         .from('envios')
-        .select('*, perfis(id, full_name, email, avatar_url)')
+        .select('*, perfis!submissions_student_id_fkey(id, full_name, email, avatar_url)')
         .eq('id', id)
         .single()
       if (err) throw err
@@ -120,7 +132,7 @@ export const useSubmissions = () => {
           corrigido_por: usuario.value.id!
         })
         .eq('id', submissionId)
-        .select('*, perfis(id, full_name, email, avatar_url)')
+        .select('*, perfis!submissions_student_id_fkey(id, full_name, email, avatar_url)')
         .single()
       if (err) throw err
       return data as Submission
@@ -150,7 +162,7 @@ export const useSubmissions = () => {
         .from('envios')
         .update(updates)
         .eq('id', submissionId)
-        .select('*, perfis(id, full_name, email, avatar_url)')
+        .select('*, perfis!submissions_student_id_fkey(id, full_name, email, avatar_url)')
         .single()
       if (err) throw err
       return data as Submission
@@ -226,7 +238,7 @@ export const useSubmissions = () => {
 
       const { data, error: err } = await supabase
         .from('envios')
-        .select('*, perfis(id, full_name, email, avatar_url), atividades(id, titulo, turma_id, turmas(name))')
+        .select('*, perfis!submissions_student_id_fkey(id, full_name, email, avatar_url), atividades(id, titulo, turma_id, turmas(name))')
         .in('atividade_id', assignmentIds)
         .is('nota', null)
         .order('enviado_em', { ascending: false })

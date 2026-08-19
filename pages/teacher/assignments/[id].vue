@@ -68,8 +68,44 @@
     <div v-else-if="atividade" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
       <!-- Conteudo principal -->
       <div class="lg:col-span-2 space-y-6">
+        <!-- Materiais da prova objetiva -->
+        <Cartao v-if="atividade.tipo === 'objetiva'">
+          <h2 class="text-heading-3 mb-4">Materiais da prova objetiva</h2>
+          <div v-if="atividade.descricao" class="mb-5">
+            <p class="text-xs font-medium text-gray-500 uppercase mb-2">Descricao</p>
+            <div class="prose prose-sm max-w-none text-gray-700" v-html="atividade.descricao"></div>
+          </div>
+          <div class="flex flex-wrap gap-3">
+            <button
+              :disabled="carregandoUrlObjetiva === 'folha'"
+              @click="baixarMaterialObjetiva('folha')"
+              class="btn-outline text-sm disabled:opacity-50"
+            >
+              Baixar folha de respostas
+            </button>
+            <button
+              :disabled="carregandoUrlObjetiva === 'solucao'"
+              @click="baixarMaterialObjetiva('solucao')"
+              class="btn-outline text-sm disabled:opacity-50"
+            >
+              Baixar solução (gabarito marcado)
+            </button>
+            <button
+              :disabled="carregandoUrlObjetiva === 'todas'"
+              @click="baixarTodasAsFolhasObjetiva"
+              class="btn-outline text-sm disabled:opacity-50"
+            >
+              Baixar todas as folhas (turma inteira)
+            </button>
+          </div>
+          <p class="text-xs text-gray-400 mt-3">
+            {{ (atividade.atividade_objetiva?.questoes || []).length }} questões · valor {{ atividade.nota_maxima }} ·
+            {{ atividade.atividade_objetiva?.matricula_em_blocos ? 'com' : 'sem' }} matrícula em blocos
+          </p>
+        </Cartao>
+
         <!-- Atividade + Gabarito (mesmo cartao) -->
-        <Cartao>
+        <Cartao v-else>
           <h2 class="text-heading-3 mb-4">Atividade e Gabarito</h2>
 
           <!-- Descricao -->
@@ -154,6 +190,77 @@
           </div>
         </Cartao>
 
+        <!-- Aguardando confirmação (prova objetiva) -->
+        <Cartao v-if="atividade.tipo === 'objetiva' && pendentesObjetiva.length > 0">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="text-heading-3">Aguardando confirmação ({{ pendentesObjetiva.length }})</h2>
+            <button :disabled="confirmandoTodosObjetiva" @click="confirmarTodosPendentesObjetiva" class="btn-outline text-sm disabled:opacity-50">
+              {{ confirmandoTodosObjetiva ? 'Confirmando...' : 'Confirmar todos' }}
+            </button>
+          </div>
+          <p class="text-sm text-text-secondary mb-4">
+            Resultado do lote ainda não é oficial pro aluno — confira a nota e a folha antes de confirmar.
+          </p>
+
+          <div class="space-y-3">
+            <div v-for="submissao in pendentesObjetiva" :key="submissao.id" class="border border-gray-200 rounded-lg p-3">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <p class="text-sm font-medium text-gray-900">{{ submissao.perfis?.full_name || 'Aluno' }}</p>
+                  <p class="text-xs text-gray-500">
+                    Nota detectada: <span class="font-semibold">{{ submissao.nota ?? '—' }}</span>
+                    <span v-if="submissao.envio_objetivo?.percentual != null"> ({{ submissao.envio_objetivo.percentual }}%)</span>
+                  </p>
+                </div>
+                <div class="flex items-center gap-3">
+                  <button
+                    v-if="submissao.envio_objetivo?.imagem_processada_url"
+                    @click="verImagemObjetiva(submissao.envio_objetivo.imagem_processada_url)"
+                    class="text-xs text-primary-500 hover:text-primary-600 font-medium"
+                  >
+                    Ver folha
+                  </button>
+                  <button @click="alternarEdicaoObjetiva(submissao)" class="text-xs text-gray-500 hover:text-primary-600 font-medium">
+                    {{ editandoEnvioIdObjetiva === submissao.id ? 'Fechar edição' : 'Editar respostas' }}
+                  </button>
+                  <button
+                    :disabled="processandoEnvioIdObjetiva === submissao.id + '-rejeitar'"
+                    @click="rejeitarObjetiva(submissao)"
+                    class="btn-outline text-sm text-critical-600 disabled:opacity-50"
+                  >
+                    Rejeitar
+                  </button>
+                  <button
+                    :disabled="processandoEnvioIdObjetiva === submissao.id + '-confirmar'"
+                    @click="confirmarObjetiva(submissao)"
+                    class="btn-primary text-sm disabled:opacity-50"
+                  >
+                    Confirmar
+                  </button>
+                </div>
+              </div>
+
+              <div v-if="editandoEnvioIdObjetiva === submissao.id" class="mt-3 pt-3 border-t border-gray-100">
+                <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-2 mb-3">
+                  <div v-for="questao in atividade.atividade_objetiva?.questoes || []" :key="questao.numero">
+                    <label class="block text-[10px] text-gray-500 mb-0.5">Questão {{ questao.numero }}</label>
+                    <select v-model="respostasEditadasObjetiva[`q${questao.numero}`]" class="form-input py-1 text-xs">
+                      <option value="">em branco</option>
+                      <option v-for="letra in alternativasDeObjetiva(questao.option_count)" :key="letra" :value="letra">{{ letra }}</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="flex items-center gap-2">
+                  <button class="btn-outline text-sm" @click="editandoEnvioIdObjetiva = null">Cancelar</button>
+                  <button :disabled="salvandoRespostasObjetiva" class="btn-primary text-sm disabled:opacity-50" @click="salvarRespostasObjetiva(submissao)">
+                    {{ salvandoRespostasObjetiva ? 'Salvando...' : 'Salvar e recalcular nota' }}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </Cartao>
+
         <!-- Alunos -->
         <Cartao>
           <div class="flex items-center justify-between mb-4">
@@ -189,7 +296,43 @@
                   <p v-else class="text-xs text-gray-400">Ainda nao entregou</p>
                 </div>
               </div>
-              <div class="flex items-center gap-3">
+              <!-- Prova objetiva: status simplificado + acoes de folha (sem IA/validacao manual) -->
+              <div v-if="atividade.tipo === 'objetiva'" class="flex items-center gap-3">
+                <span
+                  v-if="aluno.submissao"
+                  :class="['text-xs px-2 py-0.5 rounded-full font-medium', classeStatusObjetiva(aluno.submissao.status_processamento)]"
+                >
+                  {{ rotuloStatusObjetiva(aluno.submissao.status_processamento) }}
+                </span>
+                <span v-else class="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full font-medium">Pendente</span>
+                <span v-if="aluno.submissao?.status_processamento === 'corrigido'" class="text-sm font-semibold text-green-600">
+                  {{ aluno.submissao.nota }}/{{ atividade.nota_maxima }}
+                </span>
+                <button
+                  :disabled="carregandoUrlObjetiva === `folha-${aluno.id}`"
+                  @click="baixarFolhaAlunoObjetiva(aluno.id)"
+                  class="text-xs text-gray-500 hover:text-primary-600 font-medium disabled:opacity-50"
+                >
+                  Baixar folha
+                </button>
+                <button
+                  v-if="aluno.submissao?.envio_objetivo?.imagem_processada_url"
+                  @click="verImagemObjetiva(aluno.submissao.envio_objetivo.imagem_processada_url)"
+                  class="text-xs text-primary-500 hover:text-primary-600 font-medium"
+                >
+                  Ver folha
+                </button>
+                <label
+                  :class="[
+                    'text-xs font-medium cursor-pointer',
+                    enviandoAlunoObjetiva === aluno.id ? 'text-gray-400 pointer-events-none' : 'text-gray-500 hover:text-primary-600'
+                  ]"
+                >
+                  {{ enviandoAlunoObjetiva === aluno.id ? 'Enviando...' : 'Enviar folha' }}
+                  <input type="file" accept=".pdf,.png,.jpg,.jpeg" class="hidden" @change="enviarFolhaAlunoObjetiva(aluno.id, $event)" />
+                </label>
+              </div>
+              <div v-else class="flex items-center gap-3">
                 <!-- Corrigida pela IA + Validada -->
                 <template v-if="aluno.submissao?.corrigido_em && aluno.submissao?.validado_professor">
                   <span class="text-xs text-green-600 bg-green-50 px-2 py-0.5 rounded-full font-medium">
@@ -336,8 +479,8 @@
 
       <!-- Info lateral -->
       <div class="space-y-6">
-        <!-- Enviar Respostas -->
-        <Cartao>
+        <!-- Enviar Respostas (dissertativa) -->
+        <Cartao v-if="atividade.tipo === 'dissertativa'">
           <div class="flex items-center gap-2 mb-4">
             <Icone :tamanho="20">
               <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
@@ -364,6 +507,44 @@
             </svg>
             {{ enviandoLote ? 'Enviando...' : 'Enviar Respostas' }}
           </button>
+        </Cartao>
+
+        <!-- Escanear folhas (objetiva) -->
+        <Cartao v-else>
+          <div class="flex items-center gap-2 mb-4">
+            <Icone :tamanho="20">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 4.5a3 3 0 00-3 3v9a3 3 0 003 3h15a3 3 0 003-3v-9a3 3 0 00-3-3h-1.5m-12 0h12m-12 0l1.5-3h9l1.5 3m-13.5 0h13.5" />
+            </Icone>
+            <h2 class="text-heading-3">Escanear folhas</h2>
+          </div>
+          <p class="text-xs text-text-secondary mb-3">
+            Envie um único PDF com todas as folhas escaneadas da turma (uma folha por página).
+          </p>
+          <input type="file" accept=".pdf,.png,.jpg,.jpeg" class="form-input text-sm" @change="escanearLoteObjetivaHandler" />
+          <p v-if="escaneandoLoteObjetiva" class="text-xs text-gray-500 mt-2">Processando folhas...</p>
+          <div v-if="resultadoEscaneamentoObjetiva" class="mt-3 p-3 bg-gray-50 rounded-lg text-xs space-y-1">
+            <p>{{ resultadoEscaneamentoObjetiva.total_paginas }} página(s) · {{ resultadoEscaneamentoObjetiva.aguardando_confirmacao }} aguardando confirmação · {{ naoIdentificadosObjetiva.length }} não identificada(s)</p>
+          </div>
+          <p v-if="erroEscaneamentoObjetiva" class="mt-2 text-xs text-critical-500">{{ erroEscaneamentoObjetiva }}</p>
+
+          <div v-if="naoIdentificadosObjetiva.length > 0" class="mt-4 pt-4 border-t border-gray-100 space-y-3">
+            <p class="text-xs font-medium text-gray-700">Folhas não identificadas — atribua manualmente:</p>
+            <div v-for="(pagina, indice) in naoIdentificadosObjetiva" :key="pagina.pagina" class="border border-gray-200 rounded-lg p-2">
+              <img v-if="pagina.pagina_base64" :src="`data:image/png;base64,${pagina.pagina_base64}`" :alt="pagina.pagina" class="w-full h-auto rounded border border-gray-200 mb-2" />
+              <p class="text-[11px] text-gray-500 mb-2">{{ pagina.motivo }}</p>
+              <select v-model="atribuicoesObjetiva[indice]" class="form-input py-1 text-xs mb-2">
+                <option value="">Selecione o aluno...</option>
+                <option v-for="aluno in alunosComStatus" :key="aluno.id" :value="aluno.id">{{ aluno.nome }}</option>
+              </select>
+              <button
+                :disabled="!atribuicoesObjetiva[indice] || atribuindoObjetiva === indice"
+                @click="atribuirObjetiva(indice)"
+                class="btn-outline text-xs w-full disabled:opacity-50"
+              >
+                Atribuir
+              </button>
+            </div>
+          </div>
         </Cartao>
 
         <Cartao>
@@ -460,6 +641,16 @@ const assignmentId = route.params.id as string
 const { getAssignment, updateAssignment, publishAssignment, closeAssignment, toggleVisibilidade, fetchHabilidades, fetchAvaliacoesAtividade } = useAssignments()
 const { submissions: submissoes, getSubmissionsForAssignment, submitLote } = useSubmissions()
 const { fetchClassStudents } = useClasses()
+const {
+  escanearLoteObjetivo,
+  escanearIndividualObjetivo,
+  atribuirEnvioObjetivoManual,
+  confirmarEnvioObjetivo,
+  rejeitarEnvioObjetivo,
+  confirmarPendentesObjetivos,
+  editarRespostasObjetivo,
+  urlAssinadaObjetiva
+} = useAtividadesObjetivas()
 
 const carregando = ref(true)
 const atividade = ref<any>(null)
@@ -616,6 +807,227 @@ const enviarLote = async () => {
     mostrarNotificacao('critico', 'Erro ao enviar respostas', e.message)
   } finally {
     enviandoLote.value = false
+  }
+}
+
+// ---- Prova objetiva ----
+
+const rotuloStatusObjetiva = (s?: string) => ({
+  pendente: 'Pendente',
+  processando: 'Processando',
+  aguardando_confirmacao: 'Aguardando confirmação',
+  corrigido: 'Corrigido',
+  erro: 'Erro'
+}[s || ''] || 'Não enviado')
+
+const classeStatusObjetiva = (s?: string) => ({
+  pendente: 'bg-gray-100 text-gray-600',
+  processando: 'bg-amber-50 text-amber-700',
+  aguardando_confirmacao: 'bg-amber-50 text-amber-700',
+  corrigido: 'bg-green-50 text-green-700',
+  erro: 'bg-critical-50 text-critical-600'
+}[s || ''] || 'bg-gray-100 text-gray-400')
+
+const pendentesObjetiva = computed(() =>
+  submissoes.value.filter(s => s.status_processamento === 'aguardando_confirmacao')
+)
+
+const carregandoUrlObjetiva = ref<string | null>(null)
+
+const baixarMaterialObjetiva = async (tipo: 'folha' | 'solucao') => {
+  if (!atividade.value?.atividade_objetiva) return
+  carregandoUrlObjetiva.value = tipo
+  try {
+    const caminho = tipo === 'folha'
+      ? atividade.value.atividade_objetiva.folha_respostas_url
+      : atividade.value.atividade_objetiva.folha_solucao_url
+    const url = await urlAssinadaObjetiva(caminho)
+    if (url) window.open(url, '_blank')
+    else mostrarNotificacao('critico', 'Não foi possível gerar o link de download')
+  } finally {
+    carregandoUrlObjetiva.value = null
+  }
+}
+
+const baixarTodasAsFolhasObjetiva = async () => {
+  if (!atividade.value) return
+  carregandoUrlObjetiva.value = 'todas'
+  try {
+    const caminho = `${atividade.value.escola_id}/atividades/${assignmentId}/gabarito/todas_as_folhas.pdf`
+    const url = await urlAssinadaObjetiva(caminho)
+    if (url) window.open(url, '_blank')
+    else mostrarNotificacao('critico', 'Arquivo combinado não encontrado')
+  } finally {
+    carregandoUrlObjetiva.value = null
+  }
+}
+
+const baixarFolhaAlunoObjetiva = async (alunoId: string) => {
+  if (!atividade.value) return
+  const chave = `folha-${alunoId}`
+  carregandoUrlObjetiva.value = chave
+  try {
+    const caminho = `${atividade.value.escola_id}/atividades/${assignmentId}/gabarito/alunos/${alunoId}.pdf`
+    const url = await urlAssinadaObjetiva(caminho)
+    if (url) window.open(url, '_blank')
+    else mostrarNotificacao('critico', 'Folha personalizada não encontrada')
+  } finally {
+    carregandoUrlObjetiva.value = null
+  }
+}
+
+const verImagemObjetiva = async (caminho: string) => {
+  const url = await urlAssinadaObjetiva(caminho, 'submissions-files')
+  if (url) window.open(url, '_blank')
+}
+
+const enviandoAlunoObjetiva = ref<string | null>(null)
+
+const enviarFolhaAlunoObjetiva = async (alunoId: string, event: Event) => {
+  const input = event.target as HTMLInputElement
+  const arquivo = input.files?.[0]
+  if (!arquivo) return
+
+  enviandoAlunoObjetiva.value = alunoId
+  try {
+    await escanearIndividualObjetivo(assignmentId, alunoId, arquivo)
+    mostrarNotificacao('sucesso', 'Folha enviada e corrigida!')
+    await getSubmissionsForAssignment(assignmentId)
+  } catch (e: any) {
+    mostrarNotificacao('critico', 'Erro ao enviar a folha', e?.data?.message || e.message || '')
+  } finally {
+    enviandoAlunoObjetiva.value = null
+    input.value = ''
+  }
+}
+
+const processandoEnvioIdObjetiva = ref<string | null>(null)
+const confirmandoTodosObjetiva = ref(false)
+
+const confirmarObjetiva = async (submissao: any) => {
+  processandoEnvioIdObjetiva.value = `${submissao.id}-confirmar`
+  try {
+    await confirmarEnvioObjetivo(assignmentId, submissao.id)
+    mostrarNotificacao('sucesso', 'Resultado confirmado!')
+    await getSubmissionsForAssignment(assignmentId)
+  } catch (e: any) {
+    mostrarNotificacao('critico', 'Erro ao confirmar', e?.data?.message || e.message || '')
+  } finally {
+    processandoEnvioIdObjetiva.value = null
+  }
+}
+
+const rejeitarObjetiva = async (submissao: any) => {
+  processandoEnvioIdObjetiva.value = `${submissao.id}-rejeitar`
+  try {
+    await rejeitarEnvioObjetivo(assignmentId, submissao.id)
+    mostrarNotificacao('sucesso', 'Envio rejeitado — o aluno pode ser reenviado.')
+    await getSubmissionsForAssignment(assignmentId)
+  } catch (e: any) {
+    mostrarNotificacao('critico', 'Erro ao rejeitar', e?.data?.message || e.message || '')
+  } finally {
+    processandoEnvioIdObjetiva.value = null
+  }
+}
+
+const confirmarTodosPendentesObjetiva = async () => {
+  confirmandoTodosObjetiva.value = true
+  try {
+    const resultado = await confirmarPendentesObjetivos(assignmentId)
+    mostrarNotificacao('sucesso', `${resultado.confirmados} envio(s) confirmado(s)!`)
+    await getSubmissionsForAssignment(assignmentId)
+  } catch (e: any) {
+    mostrarNotificacao('critico', 'Erro ao confirmar todos', e?.data?.message || e.message || '')
+  } finally {
+    confirmandoTodosObjetiva.value = false
+  }
+}
+
+const alternativasDeObjetiva = (optionCount: number) =>
+  Array.from({ length: optionCount }, (_, i) => String.fromCharCode(65 + i))
+
+const editandoEnvioIdObjetiva = ref<string | null>(null)
+const respostasEditadasObjetiva = ref<Record<string, string>>({})
+const salvandoRespostasObjetiva = ref(false)
+
+const alternarEdicaoObjetiva = (submissao: any) => {
+  if (editandoEnvioIdObjetiva.value === submissao.id) {
+    editandoEnvioIdObjetiva.value = null
+    return
+  }
+  respostasEditadasObjetiva.value = { ...(submissao.envio_objetivo?.respostas_detectadas || {}) }
+  editandoEnvioIdObjetiva.value = submissao.id
+}
+
+const salvarRespostasObjetiva = async (submissao: any) => {
+  salvandoRespostasObjetiva.value = true
+  try {
+    await editarRespostasObjetivo(assignmentId, submissao.id, respostasEditadasObjetiva.value)
+    mostrarNotificacao('sucesso', 'Respostas atualizadas e nota recalculada!')
+    editandoEnvioIdObjetiva.value = null
+    await getSubmissionsForAssignment(assignmentId)
+  } catch (e: any) {
+    mostrarNotificacao('critico', 'Erro ao salvar respostas', e?.data?.message || e.message || '')
+  } finally {
+    salvandoRespostasObjetiva.value = false
+  }
+}
+
+interface PaginaNaoIdentificadaObjetiva {
+  pagina: string
+  motivo: string
+  pagina_base64?: string
+}
+
+const escaneandoLoteObjetiva = ref(false)
+const erroEscaneamentoObjetiva = ref<string | null>(null)
+const resultadoEscaneamentoObjetiva = ref<{ total_paginas: number; aguardando_confirmacao: number } | null>(null)
+const naoIdentificadosObjetiva = ref<PaginaNaoIdentificadaObjetiva[]>([])
+const atribuicoesObjetiva = ref<Record<number, string>>({})
+const atribuindoObjetiva = ref<number | null>(null)
+
+const escanearLoteObjetivaHandler = async (event: Event) => {
+  const input = event.target as HTMLInputElement
+  const arquivo = input.files?.[0]
+  if (!arquivo) return
+
+  erroEscaneamentoObjetiva.value = null
+  resultadoEscaneamentoObjetiva.value = null
+  naoIdentificadosObjetiva.value = []
+  escaneandoLoteObjetiva.value = true
+
+  try {
+    const resposta = await escanearLoteObjetivo(assignmentId, arquivo)
+    resultadoEscaneamentoObjetiva.value = {
+      total_paginas: resposta.total_paginas,
+      aguardando_confirmacao: resposta.aguardando_confirmacao
+    }
+    naoIdentificadosObjetiva.value = resposta.nao_identificados
+    await getSubmissionsForAssignment(assignmentId)
+  } catch (e: any) {
+    erroEscaneamentoObjetiva.value = e?.data?.message || e.message || 'Erro ao processar o arquivo'
+  } finally {
+    escaneandoLoteObjetiva.value = false
+    input.value = ''
+  }
+}
+
+const atribuirObjetiva = async (indice: number) => {
+  const alunoId = atribuicoesObjetiva.value[indice]
+  const pagina = naoIdentificadosObjetiva.value[indice]
+  if (!alunoId || !pagina?.pagina_base64) return
+
+  atribuindoObjetiva.value = indice
+  try {
+    await atribuirEnvioObjetivoManual(assignmentId, alunoId, pagina.pagina_base64, pagina.pagina)
+    naoIdentificadosObjetiva.value.splice(indice, 1)
+    delete atribuicoesObjetiva.value[indice]
+    mostrarNotificacao('sucesso', 'Folha atribuída e corrigida!')
+    await getSubmissionsForAssignment(assignmentId)
+  } catch (e: any) {
+    mostrarNotificacao('critico', 'Erro ao atribuir folha', e?.data?.message || e.message || '')
+  } finally {
+    atribuindoObjetiva.value = null
   }
 }
 

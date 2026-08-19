@@ -67,5 +67,14 @@ export default defineNuxtConfig({
   // Pinia store configuration
   pinia: {
     storesDirs: ['./stores/**']
+  },
+
+  // Config de servidor (não exposta ao client) para o microserviço de
+  // correção OMR (ver /service no repo omrchecker). Sem valor padrão de
+  // produção de propósito — defina OMR_SERVICE_URL/OMR_SERVICE_TOKEN no
+  // ambiente antes de habilitar o módulo de Simulados.
+  runtimeConfig: {
+    omrServiceUrl: process.env.OMR_SERVICE_URL || 'http://127.0.0.1:8010',
+    omrServiceToken: process.env.OMR_SERVICE_TOKEN || ''
   }
 })

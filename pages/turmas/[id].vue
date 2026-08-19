@@ -148,16 +148,28 @@
           <div class="bg-white border border-gray-200 rounded-xl p-5">
             <div class="flex items-center justify-between mb-4">
               <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Disciplinas e Professores</p>
-              <button
-                v-if="isAdmin"
-                @click="abrirModalVincular"
-                class="p-1.5 rounded-lg text-gray-400 hover:text-primary-500 hover:bg-primary-50 transition-colors"
-                title="Vincular disciplina e professor"
-              >
-                <Icone :tamanho="16">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-                </Icone>
-              </button>
+              <div class="flex items-center gap-1">
+                <button
+                  v-if="isAdmin"
+                  @click="abrirModalDisciplinas"
+                  class="p-1.5 rounded-lg text-gray-400 hover:text-primary-500 hover:bg-primary-50 transition-colors"
+                  title="Selecionar disciplinas da turma"
+                >
+                  <Icone :tamanho="16">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z" />
+                  </Icone>
+                </button>
+                <button
+                  v-if="isAdmin"
+                  @click="abrirModalVincular"
+                  class="p-1.5 rounded-lg text-gray-400 hover:text-primary-500 hover:bg-primary-50 transition-colors"
+                  title="Vincular disciplina e professor"
+                >
+                  <Icone :tamanho="16">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                  </Icone>
+                </button>
+              </div>
             </div>
 
             <div v-if="disciplinasGrid.length === 0" class="py-4 text-center">
@@ -224,6 +236,12 @@
       @fechar="modalVincularAberto = false"
     >
       <div class="space-y-4">
+        <div v-if="opcoesDiscExtra.length === 0" class="bg-amber-50 border border-amber-200 rounded-lg p-3">
+          <p class="text-xs text-amber-700">
+            Essa turma ainda não tem nenhuma disciplina selecionada. Feche este modal e use o ícone de
+            lápis ao lado, em "Disciplinas e Professores", pra escolher as disciplinas da turma primeiro.
+          </p>
+        </div>
         <div>
           <CampoSelecao
             rotulo="Disciplina"
@@ -280,6 +298,43 @@
       </template>
     </Modal>
 
+    <!-- Modal Disciplinas da Turma -->
+    <Modal
+      :esta-aberto="modalDisciplinasAberto"
+      titulo="Disciplinas da Turma"
+      @fechar="modalDisciplinasAberto = false"
+    >
+      <div v-if="subjects.length === 0" class="py-6 text-center">
+        <p class="text-sm text-gray-500">Nenhuma disciplina cadastrada na escola</p>
+      </div>
+      <div v-else class="space-y-1 max-h-80 overflow-y-auto">
+        <label
+          v-for="disc in subjects"
+          :key="disc.id"
+          :class="[
+            'flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer transition-colors',
+            disciplinasSelecionadasModal.has(disc.id) ? 'bg-primary-50' : 'hover:bg-gray-50'
+          ]"
+        >
+          <input
+            type="checkbox"
+            :checked="disciplinasSelecionadasModal.has(disc.id)"
+            @change="toggleDisciplinaModal(disc.id)"
+            class="w-4 h-4 rounded border-gray-300 text-primary-500 focus:ring-primary-500"
+          />
+          <span :class="['text-sm', disciplinasSelecionadasModal.has(disc.id) ? 'font-semibold text-primary-700' : 'text-gray-700']">
+            {{ disc.name }}
+          </span>
+        </label>
+      </div>
+      <template #rodape>
+        <button @click="modalDisciplinasAberto = false" class="btn-outline">Cancelar</button>
+        <button @click="salvarDisciplinasDaTurma" :disabled="salvandoDisciplinas" class="btn-primary">
+          {{ salvandoDisciplinas ? 'Salvando...' : 'Salvar' }}
+        </button>
+      </template>
+    </Modal>
+
     <!-- Diálogo de confirmação -->
     <DialogoConfirmacao
       :esta-aberto="dialogoAberto"
@@ -323,53 +378,51 @@ definePageMeta({
   requiredRole: ['admin', 'pedagogue', 'teacher', 'collaborator']
 })
 
-const { usuario } = useUsuario()
+const { usuario, ensureProfile } = useUsuario()
 const { isAdmin } = usePermissions()
 const { fetchClass, fetchClassStudents, fetchClassTeachers, addTeacher, removeTeacher, fetchAvailableTeachers } = useClasses()
 const { fetchClassStudentScores } = useSubmissions()
 const { subjects, fetchSubjects } = useSubjects()
-const { fetchCurriculum } = useGradeCurricula()
+const { fetchDisciplinasDaTurma, bulkSetDisciplinasDaTurma } = useTurmaDisciplinas()
 
 const loadingPage = ref(true)
 const turmaData = ref<any>(null)
 const classStudents = ref<any[]>([])
 const classTeachers = ref<any[]>([])
 const studentScores = ref<{ studentId: string; media: number; totalAvaliacoes: number }[]>([])
-const curriculumSubjects = ref<{ id: string; name: string }[]>([])
+const disciplinasTurma = ref<{ id: string; name: string }[]>([])
 const professoresDisponiveis = ref<any[]>([])
 
-// --- Disciplinas Grid: merge curriculum + class_teachers ---
+// --- Disciplinas Grid: disciplinas registradas pra essa turma + professor (se houver) ---
 interface DisciplinaItem {
   subjectId: string
   subjectName: string
   teacher: { id: string; full_name: string; avatar_url: string | null } | null
-  fromCurriculum: boolean
 }
 
 const disciplinasGrid = computed((): DisciplinaItem[] => {
   const items: DisciplinaItem[] = []
   const seen = new Set<string>()
 
-  // 1. Start with curriculum subjects
-  for (const cs of curriculumSubjects.value) {
-    const ct = classTeachers.value.find(t => t.subjects?.id === cs.id)
+  // 1. Disciplinas registradas pra turma (via turma_disciplinas)
+  for (const d of disciplinasTurma.value) {
+    const ct = classTeachers.value.find(t => t.subjects?.id === d.id)
     items.push({
-      subjectId: cs.id,
-      subjectName: cs.name,
-      teacher: ct ? { id: ct.teacher_id, full_name: ct.profiles?.full_name || '', avatar_url: ct.profiles?.avatar_url || null } : null,
-      fromCurriculum: true
+      subjectId: d.id,
+      subjectName: d.name,
+      teacher: ct ? { id: ct.teacher_id, full_name: ct.profiles?.full_name || '', avatar_url: ct.profiles?.avatar_url || null } : null
     })
-    seen.add(cs.id)
+    seen.add(d.id)
   }
 
-  // 2. Add extra subjects from class_teachers not in curriculum
+  // 2. Disciplinas extras vindas de turma_professores mas ainda não
+  // registradas explicitamente pra turma (dado legado/edge case)
   for (const ct of classTeachers.value) {
     if (ct.subjects?.id && !seen.has(ct.subjects.id)) {
       items.push({
         subjectId: ct.subjects.id,
         subjectName: ct.subjects.name || '',
-        teacher: { id: ct.teacher_id, full_name: ct.profiles?.full_name || '', avatar_url: ct.profiles?.avatar_url || null },
-        fromCurriculum: false
+        teacher: { id: ct.teacher_id, full_name: ct.profiles?.full_name || '', avatar_url: ct.profiles?.avatar_url || null }
       })
       seen.add(ct.subjects.id)
     }
@@ -377,6 +430,38 @@ const disciplinasGrid = computed((): DisciplinaItem[] => {
 
   return items.sort((a, b) => a.subjectName.localeCompare(b.subjectName))
 })
+
+// --- Modal Disciplinas da Turma ---
+const modalDisciplinasAberto = ref(false)
+const disciplinasSelecionadasModal = ref(new Set<string>())
+const salvandoDisciplinas = ref(false)
+
+const abrirModalDisciplinas = () => {
+  disciplinasSelecionadasModal.value = new Set(disciplinasTurma.value.map(d => d.id))
+  modalDisciplinasAberto.value = true
+}
+
+const toggleDisciplinaModal = (id: string) => {
+  const novo = new Set(disciplinasSelecionadasModal.value)
+  if (novo.has(id)) novo.delete(id)
+  else novo.add(id)
+  disciplinasSelecionadasModal.value = novo
+}
+
+const salvarDisciplinasDaTurma = async () => {
+  salvandoDisciplinas.value = true
+  try {
+    const idsSelecionados = [...disciplinasSelecionadasModal.value]
+    await bulkSetDisciplinasDaTurma(turmaId, idsSelecionados)
+    disciplinasTurma.value = subjects.value.filter(s => disciplinasSelecionadasModal.value.has(s.id))
+    modalDisciplinasAberto.value = false
+    mostrarNotificacao('sucesso', 'Disciplinas da turma atualizadas')
+  } catch {
+    mostrarNotificacao('critico', 'Erro ao salvar disciplinas da turma')
+  } finally {
+    salvandoDisciplinas.value = false
+  }
+}
 
 // --- Modal vincular ---
 const modalVincularAberto = ref(false)
@@ -387,9 +472,9 @@ const formVinculo = ref({ subjectId: '', teacherId: '' })
 let timeoutBusca: ReturnType<typeof setTimeout> | null = null
 
 const opcoesDiscExtra = computed(() =>
-  subjects.value
-    .filter(s => !classTeachers.value.some(ct => ct.subjects?.id === s.id))
-    .map(s => ({ rotulo: s.name, valor: s.id }))
+  disciplinasTurma.value
+    .filter(d => !classTeachers.value.some(ct => ct.subjects?.id === d.id))
+    .map(d => ({ rotulo: d.name, valor: d.id }))
 )
 
 const abrirModalVincular = () => {
@@ -537,23 +622,22 @@ const topicosMock = [
 
 // --- Init ---
 onMounted(async () => {
-  const [classData, students, teachers] = await Promise.all([
+  // Garante usuario.value.schoolId resolvido antes de fetchSubjects() —
+  // mesmo problema já corrigido em pages/teacher/assignments/create.vue.
+  await ensureProfile()
+  const [classData, students, teachers, disciplinasVinculadas] = await Promise.all([
     fetchClass(turmaId),
     fetchClassStudents(turmaId),
     fetchClassTeachers(turmaId),
+    fetchDisciplinasDaTurma(turmaId),
     fetchSubjects()
   ])
   turmaData.value = classData
   classStudents.value = students
   classTeachers.value = teachers
-
-  // Load curriculum subjects if class has a grade_level
-  if (classData?.grade_level) {
-    const curriculum = await fetchCurriculum(classData.grade_level)
-    curriculumSubjects.value = curriculum
-      .filter(c => c.subjects)
-      .map(c => ({ id: c.subjects!.id, name: c.subjects!.name }))
-  }
+  disciplinasTurma.value = disciplinasVinculadas
+    .filter(d => d.disciplinas)
+    .map(d => ({ id: d.disciplinas!.id, name: d.disciplinas!.name }))
 
   // Load available teachers for inline assignment
   if (usuario.value.schoolId) {

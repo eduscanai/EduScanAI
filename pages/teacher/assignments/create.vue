@@ -38,11 +38,35 @@
               texto-reservado="Descreva a atividade, instrucoes, criterios de avaliacao..."
             />
             <p v-if="erros.descricao" class="mt-1 text-xs text-critical-500">{{ erros.descricao }}</p>
+
+            <div>
+              <label class="form-label">Tipo de prova</label>
+              <div class="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  class="rounded-lg border px-4 py-3 text-left transition-colors"
+                  :class="form.tipo === 'dissertativa' ? 'border-primary-500 bg-primary-50' : 'border-gray-200 hover:bg-gray-50'"
+                  @click="form.tipo = 'dissertativa'"
+                >
+                  <p class="text-sm font-semibold text-gray-900">Dissertativa</p>
+                  <p class="text-xs text-gray-500 mt-0.5">Anexo em PDF + gabarito, corrigida por IA</p>
+                </button>
+                <button
+                  type="button"
+                  class="rounded-lg border px-4 py-3 text-left transition-colors"
+                  :class="form.tipo === 'objetiva' ? 'border-primary-500 bg-primary-50' : 'border-gray-200 hover:bg-gray-50'"
+                  @click="form.tipo = 'objetiva'"
+                >
+                  <p class="text-sm font-semibold text-gray-900">Objetiva</p>
+                  <p class="text-xs text-gray-500 mt-0.5">Múltipla escolha, corrigida por leitura óptica (OMR)</p>
+                </button>
+              </div>
+            </div>
           </div>
         </Cartao>
 
-        <!-- Etapa 2: Anexos + Gabarito -->
-        <Cartao>
+        <!-- Etapa 2: Anexos + Gabarito (dissertativa) -->
+        <Cartao v-if="form.tipo === 'dissertativa'">
           <div class="flex items-center gap-2 mb-6">
             <span class="flex items-center justify-center w-6 h-6 rounded-full bg-primary-500 text-white text-xs font-bold">2</span>
             <h2 class="text-heading-3">Anexar Atividade + Gabarito</h2>
@@ -70,6 +94,27 @@
               </p>
             </div>
           </div>
+        </Cartao>
+
+        <!-- Etapa 2: Questões (objetiva) -->
+        <Cartao v-else>
+          <div class="flex items-center justify-between bg-gray-50 rounded-lg px-4 py-3 mb-6">
+            <div>
+              <p class="text-sm font-medium text-gray-900">Matrícula em blocos</p>
+              <p class="text-xs text-gray-500 mt-0.5">
+                Folha inclui campo de matrícula manuscrita (10 blocos), como rede de segurança além do QR.
+              </p>
+            </div>
+            <Alternador v-model="form.matricula_em_blocos" />
+          </div>
+          <ConstrutorQuestoesObjetivas ref="construtorQuestoes" v-model="form.questoes" :erro="erros.questoes">
+            <template #titulo>
+              <div class="flex items-center gap-2">
+                <span class="flex items-center justify-center w-6 h-6 rounded-full bg-primary-500 text-white text-xs font-bold">2</span>
+                <h2 class="text-heading-3">Questões</h2>
+              </div>
+            </template>
+          </ConstrutorQuestoesObjetivas>
         </Cartao>
 
         <!-- Etapa 3: Unidade Tematica + Habilidades -->
@@ -174,14 +219,20 @@
             />
 
             <div>
+              <p v-if="form.turma_ids.length === 0" class="text-xs text-gray-400 mb-1">
+                Selecione a(s) turma(s) primeiro
+              </p>
               <CampoSelecao
                 rotulo="Disciplina *"
                 :modelValue="form.disciplina_id"
                 @update:modelValue="onSubjectChange($event as string)"
-                texto-reservado="Selecione"
+                :texto-reservado="form.turma_ids.length === 0 ? 'Selecione a turma primeiro' : 'Selecione'"
                 :opcoes="opcoesDisciplina"
               />
               <p v-if="erros.disciplina_id" class="mt-1 text-xs text-critical-500">{{ erros.disciplina_id }}</p>
+              <p v-else-if="form.turma_ids.length > 0 && !carregandoDisciplinas && opcoesDisciplina.length === 0" class="mt-1 text-xs text-critical-500">
+                As turmas selecionadas não têm nenhuma disciplina em comum.
+              </p>
             </div>
 
             <div>
@@ -225,7 +276,7 @@
               </div>
             </div>
 
-            <div>
+            <div v-if="form.tipo === 'dissertativa'">
               <CampoSelecao
                 rotulo="Modo de envio"
                 :modelValue="form.modo_envio"
@@ -237,6 +288,9 @@
                 {{ form.modo_envio === 'lote' ? 'Professor envia as respostas dos alunos' : 'Cada aluno envia sua propria resposta' }}
               </p>
             </div>
+            <p v-else class="text-xs text-text-secondary bg-gray-50 rounded-lg px-3 py-2">
+              Prova objetiva: o professor escaneia as folhas de respostas depois de publicar a atividade.
+            </p>
           </div>
         </Cartao>
 
@@ -301,6 +355,7 @@ import SeletorMultiplo from '~/components/form/SeletorMultiplo/SeletorMultiplo.v
 import EditorRico from '~/components/form/EditorRico/EditorRico.vue'
 import UploadArquivo from '~/components/form/UploadArquivo/UploadArquivo.vue'
 import Notificacao from '~/components/feedback/Notificacao/Notificacao.vue'
+import ConstrutorQuestoesObjetivas, { type LinhaQuestaoObjetiva } from '~/components/form/ConstrutorQuestoesObjetivas/ConstrutorQuestoesObjetivas.vue'
 
 definePageMeta({
   layout: 'dashboard',
@@ -309,10 +364,13 @@ definePageMeta({
 })
 
 const { createAssignment, publishAssignment, saveHabilidades } = useAssignments()
+const { createAtividadeObjetiva } = useAtividadesObjetivas()
+const { ensureProfile } = useUsuario()
 const salvandoRascunho = ref(false)
 const publicando = ref(false)
+const construtorQuestoes = ref<InstanceType<typeof ConstrutorQuestoesObjetivas> | null>(null)
 const { classes, fetchClasses } = useClasses()
-const { subjects, fetchSubjects } = useSubjects()
+const { fetchDisciplinasComuns } = useTurmaDisciplinas()
 const { categories, fetchCategories } = useAssignmentCategories()
 const { gradingPeriods, fetchGradingPeriods } = useGradingPeriods()
 const { topics: bnccTopics, skills: bnccSkills, fetchTopicsBySubject, fetchAllSkillsBySubject } = useBnccTopics()
@@ -323,6 +381,7 @@ const topicosAbertos = ref(new Set<string>())
 const form = ref({
   titulo: '',
   descricao: '',
+  tipo: 'dissertativa' as 'dissertativa' | 'objetiva',
   turma_ids: [] as string[],
   disciplina_id: '',
   categoria_id: '',
@@ -334,7 +393,9 @@ const form = ref({
   visivel_aluno: false,
   anexos: [] as { name: string; url: string }[],
   gabarito: [] as { name: string; url: string }[],
-  habilidade_ids: [] as string[]
+  habilidade_ids: [] as string[],
+  questoes: [] as LinhaQuestaoObjetiva[],
+  matricula_em_blocos: false
 })
 
 const erros = ref<Record<string, string>>({})
@@ -343,9 +404,26 @@ const opcoesTurma = computed(() =>
   classes.value.map(c => ({ rotulo: c.name, valor: c.id }))
 )
 
+const disciplinasComuns = ref<{ id: string; name: string }[]>([])
+const carregandoDisciplinas = ref(false)
+
 const opcoesDisciplina = computed(() =>
-  subjects.value.map(s => ({ rotulo: s.name, valor: s.id }))
+  disciplinasComuns.value.map(s => ({ rotulo: s.name, valor: s.id }))
 )
+
+watch(() => form.value.turma_ids, async (turmaIds) => {
+  carregandoDisciplinas.value = true
+  try {
+    disciplinasComuns.value = await fetchDisciplinasComuns(turmaIds)
+  } finally {
+    carregandoDisciplinas.value = false
+  }
+  if (form.value.disciplina_id && !disciplinasComuns.value.some(d => d.id === form.value.disciplina_id)) {
+    form.value.disciplina_id = ''
+    form.value.habilidade_ids = []
+    topicosAbertos.value = new Set()
+  }
+}, { deep: true })
 
 const opcoesCategoria = computed(() =>
   categories.value.map(c => ({ rotulo: `${c.name} (${c.weight}%)`, valor: c.id }))
@@ -431,8 +509,12 @@ const validar = async () => {
   if (!form.value.categoria_id) erros.value.categoria_id = 'Categoria e obrigatoria'
   if (!form.value.periodo_id) erros.value.periodo_id = 'Periodo e obrigatorio'
   if (!form.value.data_entrega) erros.value.data_entrega = 'Prazo e obrigatorio'
-  if (form.value.anexos.length === 0) erros.value.anexos = 'Anexe o PDF da atividade'
-  if (form.value.gabarito.length === 0) erros.value.gabarito = 'Anexe o gabarito'
+  if (form.value.tipo === 'dissertativa') {
+    if (form.value.anexos.length === 0) erros.value.anexos = 'Anexe o PDF da atividade'
+    if (form.value.gabarito.length === 0) erros.value.gabarito = 'Anexe o gabarito'
+  } else if (form.value.questoes.length === 0) {
+    erros.value.questoes = 'Gere ao menos uma questão'
+  }
   if (form.value.habilidade_ids.length === 0) erros.value.habilidades = 'Selecione ao menos uma habilidade'
 
   // Verificar se as turmas selecionadas tem alunos
@@ -466,6 +548,26 @@ const dadosAtividade = () => ({
   gabarito: form.value.gabarito
 })
 
+const dadosAtividadeObjetiva = () => ({
+  titulo: form.value.titulo,
+  descricao: form.value.descricao,
+  turma_ids: form.value.turma_ids,
+  disciplina_id: form.value.disciplina_id,
+  categoria_id: form.value.categoria_id,
+  periodo_id: form.value.periodo_id,
+  data_entrega: form.value.data_entrega,
+  nota_maxima: form.value.nota_maxima,
+  peso: form.value.peso,
+  visivel_aluno: form.value.visivel_aluno,
+  questoes: form.value.questoes,
+  matricula_em_blocos: form.value.matricula_em_blocos
+})
+
+const criarAtividade = () =>
+  form.value.tipo === 'objetiva'
+    ? createAtividadeObjetiva(dadosAtividadeObjetiva())
+    : createAssignment(dadosAtividade())
+
 const salvarExtras = async (assignmentIds: string[]) => {
   if (form.value.habilidade_ids.length > 0) {
     await Promise.all(assignmentIds.map(id => saveHabilidades(id, form.value.habilidade_ids)))
@@ -476,12 +578,12 @@ const salvarRascunho = async () => {
   if (!(await validar())) return
   salvandoRascunho.value = true
   try {
-    const results = await createAssignment(dadosAtividade())
-    await salvarExtras(results.map(r => r.id))
+    const results = await criarAtividade()
+    await salvarExtras(results.map((r: any) => r.id))
     mostrarNotificacao('sucesso', 'Rascunho salvo!')
     setTimeout(() => navigateTo(`/teacher/assignments/${results[0]?.id}`), 1000)
   } catch (e: any) {
-    mostrarNotificacao('critico', 'Erro ao salvar rascunho', e?.message || '')
+    mostrarNotificacao('critico', 'Erro ao salvar rascunho', e?.data?.message || e?.message || '')
   } finally {
     salvandoRascunho.value = false
   }
@@ -491,13 +593,13 @@ const salvarEPublicar = async () => {
   if (!(await validar())) return
   publicando.value = true
   try {
-    const results = await createAssignment(dadosAtividade())
-    await salvarExtras(results.map(r => r.id))
-    await Promise.all(results.map(r => publishAssignment(r.id)))
+    const results = await criarAtividade()
+    await salvarExtras(results.map((r: any) => r.id))
+    await Promise.all(results.map((r: any) => publishAssignment(r.id)))
     mostrarNotificacao('sucesso', 'Atividade publicada! Alunos foram notificados.')
     setTimeout(() => navigateTo('/teacher/assignments'), 1500)
   } catch (e: any) {
-    mostrarNotificacao('critico', 'Erro ao publicar atividade', e?.message || '')
+    mostrarNotificacao('critico', 'Erro ao publicar atividade', e?.data?.message || e?.message || '')
   } finally {
     publicando.value = false
   }
@@ -508,7 +610,20 @@ const mostrarNotificacao = (v: 'sucesso' | 'critico', t: string, m = '') => {
   notificacao.value = { visivel: true, variante: v, titulo: t, mensagem: m }
 }
 
+watch(() => form.value.tipo, async (tipo) => {
+  if (tipo === 'objetiva' && form.value.questoes.length === 0) {
+    await nextTick()
+    construtorQuestoes.value?.gerarQuestoes()
+  }
+})
+
 onMounted(async () => {
-  await Promise.all([fetchClasses(), fetchSubjects(), fetchCategories(), fetchGradingPeriods()])
+  // Garante usuario.value.schoolId resolvido (via fallback em perfis) antes
+  // de buscar turmas/disciplinas/categorias/periodos — sem isso, quando o
+  // JWT ainda não carregou app_metadata.school_id, essas buscas silenciam
+  // (usuario.value.schoolId nulo) e os selects ficam vazios. Mesmo padrão
+  // já usado em pages/dashboard/index.vue.
+  await ensureProfile()
+  await Promise.all([fetchClasses(), fetchCategories(), fetchGradingPeriods()])
 })
 </script>

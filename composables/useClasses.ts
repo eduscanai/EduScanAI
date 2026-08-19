@@ -14,7 +14,7 @@ interface ClassStudent {
   class_id: string
   student_id: string
   enrolled_at: string
-  profiles?: { id: string; full_name: string; email: string; avatar_url: string | null }
+  profiles?: { id: string; full_name: string; email: string; avatar_url: string | null; matricula: string | null }
 }
 
 interface ClassTeacher {
@@ -180,7 +180,7 @@ export const useClasses = () => {
     try {
       const { data, error: err } = await supabase
         .from('turma_alunos')
-        .select('*, perfis(id, full_name, email, avatar_url)')
+        .select('*, perfis(id, full_name, email, avatar_url, matricula)')
         .eq('class_id', classId)
         .order('enrolled_at', { ascending: false })
       if (err) throw err

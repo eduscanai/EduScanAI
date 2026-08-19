@@ -117,20 +117,27 @@ export const useStorage = () => {
       onProgress(100)
 
       // Obter URL
-      const urlResult = getFileUrl(bucket, path)
-      resolve(urlResult)
+      try {
+        const urlResult = await getFileUrl(bucket, path)
+        resolve(urlResult)
+      } catch (e) {
+        reject(e)
+      }
     })
   }
 
-  const getFileUrl = (bucket: string, path: string): string => {
-    // Buckets públicos: getPublicUrl
+  const getFileUrl = async (bucket: string, path: string): Promise<string> => {
+    // Buckets públicos: getPublicUrl (permanente)
     if (bucket === 'assignments-files' || bucket === 'school-assets') {
       const { data } = supabase.storage.from(bucket).getPublicUrl(path)
       return data.publicUrl
     }
 
-    // Buckets privados: signed URL (1h)
-    return `signed:${bucket}:${path}`
+    // Buckets privados: nenhuma tela hoje re-assina a URL na leitura — o
+    // valor devolvido aqui é persistido (ex: em envios.anexos) e usado
+    // diretamente depois. Por isso a validade precisa ser bem longa, e não
+    // a padrão de 1h do getSignedUrl.
+    return await getSignedUrl(bucket, path, 60 * 60 * 24 * 365 * 10)
   }
 
   const getSignedUrl = async (bucket: string, path: string, expiresIn = 3600): Promise<string> => {
